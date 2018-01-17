@@ -8,10 +8,10 @@ with open('README.rst', encoding='utf-8') as f:
 
 setup(
     name='google_images_download',
-    version="0.3.1",
     description="Python Script"
     " to download hundreds of images from 'Google Images'. "
     "It is a ready-to-run code! ",
+    version="0.3.2",
     long_description=long_description,
     url="https://github.com/rachmadaniHaryono/google-images-download",
     # uncomment if tarball is provided on github
