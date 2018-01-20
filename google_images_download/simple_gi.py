@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from urllib.parse import ParseResult, urlencode, urlparse, parse_qs
 from bs4 import BeautifulSoup
+from json import JSONDecodeError
+from urllib.parse import ParseResult, urlencode, urlparse, parse_qs
 import requests
 
 
@@ -52,7 +53,19 @@ class Session:
         def get_response(url):
             """Get respone func to get json response."""
             resp = self.session.get(url)
-            return resp.json()[1][1]
+            try:
+                json_resp = resp.json()
+                if not json_resp:
+                    raise ValueError('False json for following url: {}'.format(url))
+                return json_resp[1][1]
+            except JSONDecodeError as e:
+                json_resp = resp.json()
+                json_file = 'google_images_download.json'
+                with open(json_file, 'w') as f:
+                    f.write(json_resp)
+                print('{}, writing json response to {}'.format(json_file))
+                raise e
+
         return get_json_resp(query, page=page, req_func=get_response)
 
     def get_images(self, query, limit=1):
