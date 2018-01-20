@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from json import JSONDecodeError
 from urllib.parse import ParseResult, urlencode, urlparse, parse_qs
 import requests
+from pprint import pprint
 
 
 def parse_page(html):
@@ -56,6 +57,8 @@ class Session:
             try:
                 json_resp = resp.json()
                 if not json_resp:
+                    print('Response:')
+                    pprint(vars(resp))
                     raise ValueError('False json for following url: {}'.format(url))
                 return json_resp[1][1]
             except JSONDecodeError as e:
@@ -64,6 +67,8 @@ class Session:
                 with open(json_file, 'w') as f:
                     f.write(json_resp)
                 print('{}, writing json response to {}'.format(json_file))
+                print('Response:')
+                pprint(vars(resp))
                 raise e
 
         return get_json_resp(query, page=page, req_func=get_response)
