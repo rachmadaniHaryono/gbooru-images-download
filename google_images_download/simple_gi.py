@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, FeatureNotFound
 from json import JSONDecodeError
 from urllib.parse import ParseResult, urlencode, urlparse, parse_qs
 import requests
@@ -8,7 +8,10 @@ from pprint import pprint
 
 def parse_page(html):
     """Parse page."""
-    soup = BeautifulSoup(html, 'html5lib')
+    try:
+        soup = BeautifulSoup(html, 'html5lib')
+    except FeatureNotFound:
+        soup = BeautifulSoup(html, 'html.parser')
     a_tags = soup.select('div a')
     for tag in a_tags:
         href = tag.attrs['href']
