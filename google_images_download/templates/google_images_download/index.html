@@ -1,4 +1,8 @@
 {% extends 'admin/base.html' %}
+{% block head %}
+{{super()}}
+<link rel="shortcut icon" href="#" />
+{% endblock %}
 {% block body %}
 <form method="GET" action="/">
   <div class="form-group"> {{ form.query.label }} {{ form.query(size=100, class_="form-control") }} </div>
