@@ -29,8 +29,9 @@ def get_or_create_search_query(query, page=1, disable_cache=False):
     kwargs = {'search_query': query, 'page': page}
     model, created = gid.models.get_or_create(
         gid.models.db.session, gid.models.SearchQuery, **kwargs)
-    log.debug(
-        'SearchQuery', sq_id=model.id, page=page, created=created, cache_disabled=disable_cache)
+    debug_kwargs = dict(
+        search_query_id=model.id, page=page, created=created, cache_disabled=disable_cache)
+    log.debug('SearchQuery', **debug_kwargs)
     if created or disable_cache:
         log.debug('query url', url=query_url)
         resp = requests.get(query_url)
