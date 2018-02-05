@@ -9,6 +9,11 @@ from bs4 import BeautifulSoup
 from PIL import Image
 import requests
 import structlog
+try:
+    from selenium import webdriver
+    SELENIUM_ENABLED = True
+except ImportError:
+    SELENIUM_ENABLED = False
 
 import google_images_download as gid
 from google_images_download.sha256 import sha256_checksum
@@ -16,8 +21,9 @@ from google_images_download.sha256 import sha256_checksum
 log = structlog.getLogger(__name__)
 
 
-def get_or_create_search_query(query, page=1, disable_cache=False):
+def get_or_create_search_query(query, page=1, disable_cache=False, session=None):
     """Get or create search_query."""
+    session = gid.models.db.session if session is None else session
     url_page = page - 1
     url_query = {
         'q': query, 'tbm': 'isch', 'ijn': str(url_page),
@@ -28,7 +34,7 @@ def get_or_create_search_query(query, page=1, disable_cache=False):
     query_url = parsed_url._replace(query=urlencode(url_query)).geturl()
     kwargs = {'search_query': query, 'page': page}
     model, created = gid.models.get_or_create(
-        gid.models.db.session, gid.models.SearchQuery, **kwargs)
+        session, gid.models.SearchQuery, **kwargs)
     debug_kwargs = dict(
         search_query_id=model.id, page=page, created=created, cache_disabled=disable_cache)
     log.debug('SearchQuery', **debug_kwargs)
@@ -38,7 +44,7 @@ def get_or_create_search_query(query, page=1, disable_cache=False):
         json_resp = resp.json()
         match_result_ms = []
         match_result_sets = get_or_create_match_result_from_json_resp(
-            json_resp, search_query=model)
+            json_resp, search_query=model, session=session)
         for match_result_m, match_result_m_created in match_result_sets:
             match_result_ms.append(match_result_m)
         model.match_results.extend(match_result_ms)
@@ -100,39 +106,37 @@ def parse_match_result_html_tag(html_tag):
     return kwargs
 
 
-def get_or_create_image_url_from_dict(dict_input):
-    """Get or create match result from json response"""
-    model, created = gid.models.get_or_create(
-        gid.models.db.session, gid.models.ImageURL, url=dict_input['url'])
-    size_exist = (dict_input['width'] or dict_input['height'])
-    size_changed = False
-    if created and size_exist:
-        model.width = dict_input['width']
-        model.height = dict_input['height']
-        size_changed = True
-    elif not created and size_exist:
-        if not model.width and dict_input['width']:
-            model.width = dict_input['width']
-            size_changed = True
-        if not model.height and dict_input['height']:
-            model.width = dict_input['height']
-            size_changed = True
-    if size_changed:
-        gid.models.db.session.add(model)
-    return model, created
+def get_or_create_image_url_from_dict(dict_input, session=None):
+    """Get or create match result from json response.
+
+    Example dict_input:
+
+        {'url': 'example.com/1.jpg', 'height': 100, 'width':100}
+    """
+    session = gid.models.db.session if session is None else session
+    m, created = gid.models.get_or_create(
+        session, gid.models.ImageURL, url=dict_input['url'])
+    if dict_input['width']:
+        m.width = dict_input['width']
+    if dict_input['height']:
+        m.height = dict_input['height']
+    session.add(m)
+    return m, created
 
 
-def get_or_create_match_result_from_html_soup(html_tag, search_query=None):
+def get_or_create_match_result_from_html_soup(html_tag, search_query=None, session=None):
     """Get or create match result from html_soup"""
+    session = gid.models.db.session if session is None else session
     kwargs = parse_match_result_html_tag(html_tag)
     kwargs['json_data'] = json_data = gid.models.get_or_create(
-        gid.models.db.session, gid.models.JSONData, value=kwargs['json_data'])[0]
+        session, gid.models.JSONData, value=kwargs['json_data'])[0]
     kwargs['json_data_id'] = json_data.id
     # image url
-    kwargs['img_url'] = img_url = get_or_create_image_url_from_dict(kwargs['img_url'])[0]
+    kwargs['img_url'] = img_url = \
+        get_or_create_image_url_from_dict(kwargs['img_url'], session=session)[0]
     kwargs['thumbnail_url'] = thumbnail_url = \
-        get_or_create_image_url_from_dict(kwargs['thumbnail_url'])[0]
-    add_tags_to_image_url(img_url, kwargs.pop('img_url_tags', []))
+        get_or_create_image_url_from_dict(kwargs['thumbnail_url'], session=session)[0]
+    add_tags_to_image_url(img_url, kwargs.pop('img_url_tags', []), session=session)
 
     # id
     kwargs['img_url_id'] = img_url.id
@@ -142,7 +146,7 @@ def get_or_create_match_result_from_html_soup(html_tag, search_query=None):
         kwargs['search_query'] = search_query
     if not search_query:
         model, created = gid.models.get_or_create(
-            gid.models.db.session, gid.models.MatchResult, **kwargs)
+            session, gid.models.MatchResult, **kwargs)
     else:
         new_kwargs = {
             'search_query': search_query,
@@ -150,30 +154,32 @@ def get_or_create_match_result_from_html_soup(html_tag, search_query=None):
             'thumbnail_url': thumbnail_url,
         }
         model, created = gid.models.get_or_create(
-            gid.models.db.session, gid.models.MatchResult, **new_kwargs)
+            session, gid.models.MatchResult, **new_kwargs)
         for key, value in kwargs.items():
             setattr(model, key, value)
     return model, created
 
 
-def get_or_create_match_result_from_json_resp(json_resp, search_query=None):
+def get_or_create_match_result_from_json_resp(json_resp, search_query=None, session=None):
     """Get or create match result from json response"""
+    session = gid.models.db.session if session is None else session
     html = json_resp[1][1]
     soup = BeautifulSoup(html, 'html.parser')
     for html_tag in soup.select('.rg_bx'):
-        model, create = get_or_create_match_result_from_html_soup(html_tag, search_query)
+        model, create = \
+            get_or_create_match_result_from_html_soup(html_tag, search_query, session=session)
         yield model, create
 
 
-def add_tags_to_image_url(img_url, tags):
+def add_tags_to_image_url(img_url, tags, session=None):
     """add tags to image url."""
+    session = gid.models.db.session if session is None else session
     tags_models = []
     for tag in tags:
         if not tag['name']:
             log.debug('tag only contain namespace', namespace=tag['namespace'])
-        # with gid.models.db.session.no_autoflush:
         tag_m, _ = gid.models.get_or_create(
-            gid.models.db.session, gid.models.Tag, **tag)
+            session, gid.models.Tag, **tag)
         if tag_m not in img_url.tags:
             img_url.tags.append(tag_m)
         tags_models.append(tag_m)
@@ -184,36 +190,34 @@ def get_html_text_from_search_url(search_url=None, url=None):
     """Get HTML text from search url"""
     if not((search_url or url) and not (search_url and url)):
         raise ValueError('search url or image url only')
-    user_agent_dict = {
-        'firefox': 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1',  # NOQA
-        'chrome': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36',  # NOQA
-    }
-    headers = {'User-Agent': user_agent_dict['firefox']}
+    user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1'  # NOQA
+    headers = {'User-Agent': user_agent}
     url_templ = 'https://www.google.com/searchbyimage?image_url={}&safe=off'
-    if search_url:
-        resp = requests.get(search_url, headers=headers, timeout=10)
-    elif url:
+    if not search_url and url:
         search_url_from_image = url_templ.format(quote_plus(url))
         resp = requests.get(search_url_from_image, headers=headers, timeout=10)
         search_url = resp.url
+    parsed_su = urlparse(search_url)
+    # su = search_url
+    su_redirected = (parsed_su.netloc, parsed_su.path) == ('ipv4.google.com', '/sorry/index')
+    if su_redirected and SELENIUM_ENABLED:
+        wd = webdriver.Firefox()
+        new_su = parse_qs(parsed_su.query).get('continue', [None])[0]
+        if not new_su:
+            raise ValueError('Unknown format: {}'.format(search_url))
+        else:
+            search_url = new_su
+        wd.get(search_url)
+        html_text = wd.page_source
+        wd.close()
+    elif search_url:
+        resp = requests.get(search_url, headers=headers, timeout=10)
+        html_text = resp.text
+        keyword_text = 'Our systems have detected unusual traffic from your computer network.'
+        if keyword_text in html_text:
+            raise ValueError('Unusual traffic detected')
     else:
         raise ValueError('Unknown condition, search url: {} url: {}'.format(search_url, url))
-    html_text = resp.text
-    keyword_text = 'Our systems have detected unusual traffic from your computer network.'
-    if keyword_text in resp.text:
-        log.debug('get html with different user agent')
-        new_headers = {'User-Agent': user_agent_dict['chrome']}
-        if search_url:
-            resp = requests.get(search_url, headers=new_headers, timeout=10)
-        else:
-            resp = requests.get(search_url_from_image, headers=new_headers, timeout=10)
-            search_url = resp.url
-        if keyword_text in resp.text:
-            templ = 'Unusual traffic detected, response status code:{}'
-            err_msg = templ.format(resp.status_code)
-            log.error(err_msg)
-            raise ValueError(err_msg)
-        html_text = resp.text
     return {'html_text': html_text, 'search_url': search_url}
 
 
@@ -235,15 +239,29 @@ def get_search_image_result_html(file_path=None, url=None):
     return kwargs
 
 
-def get_or_create_search_image(file_path=None, url=None, disable_cache=False, thumb_folder=None):
-    """get match result from file."""
+def get_or_create_search_image(file_path=None, url=None, **kwargs):
+    """get match result from file.
+
+    Args:
+        file_path: path to image file
+        url: image url
+        **disable_cache: disable cache
+        **session: database session
+        **thumb_folder: thumbnail folder
+    """
+    # kwargs
+    disable_cache = kwargs.get('disable_cache', False)
+    session = kwargs.get('session', None)
+    thumb_folder = kwargs.get('thumb_folder', None)
+
+    session = gid.models.db.session if session is None else session
     if not((file_path or url) and not (file_path and url)):
         raise ValueError('input url or file_path only')
     if file_path:
         img_file, _ = get_or_create_image_file_with_thumbnail(
             file_path, disable_cache=disable_cache, thumb_folder=thumb_folder)
         model, created = gid.models.get_or_create(
-            gid.models.db.session, gid.models.SearchImage, img_file=img_file)
+            session, gid.models.SearchImage, img_file=img_file)
     elif url:
         instance = gid.models.SearchImage.query.filter_by(searched_img_url=url).first()
         if not instance:
@@ -253,7 +271,7 @@ def get_or_create_search_image(file_path=None, url=None, disable_cache=False, th
             instance = gid.models.SearchImage.query.filter_by(searched_img_url=url).first()
             if not instance:
                 model, created = gid.models.get_or_create(
-                    gid.models.db.session, gid.models.SearchImage,
+                    session, gid.models.SearchImage,
                     search_url=search_url, searched_img_url=url
                 )
             else:
@@ -304,16 +322,16 @@ def get_or_create_search_image(file_path=None, url=None, disable_cache=False, th
                 msr_kwargs['img_height'] = img_tag.attrs.get('height', None)
                 msr_kwargs['img_title'] = img_tag.attrs.get('title', None)
                 msr_model, _ = gid.models.get_or_create(
-                    gid.models.db.session, gid.models.MainSimilarResult, **msr_kwargs)
+                    session, gid.models.MainSimilarResult, **msr_kwargs)
                 msr_models.append(msr_model)
         # parsing: text match parsing
         text_match_tags = search_page.select('._NId > .srg > .g')
         tm_models = []
         if text_match_tags:
             for tag in text_match_tags:
-                tm_model_kwargs = parse_text_match_html_tag(tag)
+                tm_model_kwargs = parse_text_match_html_tag(tag, session=session)
                 tm_model, _ = gid.models.get_or_create(
-                    gid.models.db.session, gid.models.TextMatch, **tm_model_kwargs)
+                    session, gid.models.TextMatch, **tm_model_kwargs)
                 tm_models.append(tm_model)
         # END: parsing
         for key, value in kwargs.items():
@@ -325,8 +343,10 @@ def get_or_create_search_image(file_path=None, url=None, disable_cache=False, th
     return model, created
 
 
-def parse_text_match_html_tag(html_tag):
+def parse_text_match_html_tag(html_tag, base_url=None, session=None):
     """Parse text match html tag."""
+    session = gid.models.db.session if session is None else session
+    base_url = 'https://www.google.com' if base_url is None else base_url
     kwargs = {}
     kwargs['title'] = html_tag.select_one('h3').text
     kwargs['url'] = html_tag.select_one('h3 a').attrs.get('href', None)
@@ -334,9 +354,25 @@ def parse_text_match_html_tag(html_tag):
     kwargs['text'] = html_tag.select_one('.st').text
     img_tag = html_tag.select_one('img')
     if img_tag:
-        # TODO
-        log.warning('Image tag found, but no parser implemented yet.')
-        pass
+        a_tag = img_tag.parent.parent
+        imgres_url = urljoin(base_url, a_tag.get('href'))
+        parsed_qs = parse_qs(urlparse(imgres_url).query)
+        kwargs['imgres_url'] = imgres_url
+        kwargs['imgref_url'] = parsed_qs.get('imgrefurl', [None])[0]
+        img_url_dict_input = {
+            'url': parsed_qs.get('imgurl', [None])[0],
+            'height': parsed_qs.get('h', [None])[0],
+            'width': parsed_qs.get('w', [None])[0],
+        }
+        kwargs['img_url'] = \
+            get_or_create_image_url_from_dict(img_url_dict_input, session=session)[0]
+        thumbnail_url_dict_input = {
+            'url': img_tag.attrs.get('src', None),
+            'height': parsed_qs.get('tbnh', [None])[0],
+            'width': parsed_qs.get('tbnw', [None])[0],
+        }
+        kwargs['thumbnail_url'] = \
+            get_or_create_image_url_from_dict(thumbnail_url_dict_input, session=session)[0]
     return kwargs
 
 
@@ -344,22 +380,31 @@ def get_or_create_page_search_image(file_path=None, url=None, **kwargs):
     """Get or create page from search image.
 
     Args:
-        **search_type: search type.
-        **page: page.
-        **disable_cache: disable_cache.
+        file_path: path to image file
+        url: image url
+        **search_type: search type
+        **page: page
+        **disable_cache: disable cache
 
     """
+    # kwargs
     search_type = kwargs.get('search_type')
     page = kwargs.get('page', 1)
     disable_cache = kwargs.get('disable_cache', False)
+    session = kwargs.get('session', None)
+
+    # check input
     if page > 1:
         raise NotImplementedError('Only first page implemented yet.')
     if not((file_path or url) and not (file_path and url)):
         raise ValueError('input url or file_path only')
-    sm_model, _ = get_or_create_search_image(file_path, url=url, disable_cache=disable_cache)
+
+    session = gid.models.db.session if session is None else session
+    sm_model, _ = get_or_create_search_image(
+        file_path, url=url, disable_cache=disable_cache, session=session)
     kwargs = {'search_img': sm_model, 'search_type': search_type, 'page': page}
     model, created = gid.models.get_or_create(
-        gid.models.db.session, gid.models.SearchImagePage, **kwargs
+        session, gid.models.SearchImagePage, **kwargs
     )
     if created or disable_cache:
         gr_url = None
@@ -370,24 +415,38 @@ def get_or_create_page_search_image(file_path=None, url=None, **kwargs):
         else:
             log.error('Unknown search type: {}'.format(search_type))
         if not gr_url:
-            gid.models.db.session.add(sm_model)
-            gid.models.db.session.commit()
+            session.add(sm_model)
+            session.commit()
             raise ValueError('No url found for search type: {}'.format(search_type))
         user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1'  # NOQA
         resp = requests.get(gr_url, headers={'User-Agent': user_agent}, timeout=10)
         soup = BeautifulSoup(resp.text, 'html.parser')
         mr_models = []
         for html_tag in soup.select('.rg_bx'):
-            mr_model, _ = get_or_create_match_result_from_html_soup(html_tag)
+            mr_model, _ = get_or_create_match_result_from_html_soup(html_tag, session=session)
             mr_models.append(mr_model)
         model.match_results.extend(mr_models)
     return model, created
 
 
-def get_or_create_image_file_with_thumbnail(file_path, disable_cache=False, thumb_folder=None):
-    """Get or create image file with thumbnail."""
+def get_or_create_image_file_with_thumbnail(file_path, **kwargs):
+    """Get or create image file with thumbnail.
+
+    Args:
+        file_path: path to image file
+        **disable_cache: disable cache
+        **session: database session
+        **thumb_folder: thumbnail folder
+    """
+    # kwargs
+    disable_cache = kwargs.get('disable_cache', False)
+    session = kwargs.get('session', None)
+    thumb_folder = kwargs.get('thumb_folder', None)
+
+    session = gid.models.db.session if session is None else session
     thumb_folder = thumb_folder if thumb_folder else gid.models.DEFAULT_THUMB_FOLDER
-    img_file, img_file_created = get_or_create_image_file(file_path, disable_cache=disable_cache)
+    img_file, img_file_created = \
+        get_or_create_image_file(file_path, disable_cache=disable_cache, session=session)
     is_thumbnail_exist = False
     file_path_eq_thumb_path = False
     if img_file.thumbnail:
@@ -400,17 +459,18 @@ def get_or_create_image_file_with_thumbnail(file_path, disable_cache=False, thum
         thumbnail_file = create_thumbnail(file_path, thumb_folder)
         log.debug('thumbnail created', m=thumbnail_file, folder=thumb_folder)
         thumbnail_file_model, _ = \
-            get_or_create_image_file(thumbnail_file, disable_cache=disable_cache)
+            get_or_create_image_file(thumbnail_file, disable_cache=disable_cache, session=session)
         thumbnail_file_model.thumbnail = thumbnail_file_model
         img_file.thumbnail = thumbnail_file_model
     return img_file, img_file_created
 
 
-def get_or_create_image_file(file_path, disable_cache=False):
+def get_or_create_image_file(file_path, disable_cache=False, session=None):
     """Get image file."""
+    session = gid.models.db.session if session is None else session
     checksum = sha256_checksum(file_path)
     model, created = gid.models.get_or_create(
-        gid.models.db.session, gid.models.ImageFile, checksum=checksum)
+        session, gid.models.ImageFile, checksum=checksum)
     if created or disable_cache:
         kwargs = {}
         img = Image.open(file_path)
