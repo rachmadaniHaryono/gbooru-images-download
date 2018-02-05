@@ -125,8 +125,9 @@ class FromFileSearchImageView(BaseView):
         file_exist = os.path.isfile(file_path) if file_path is not None else False
         empty_response = self.render(
             'google_images_download/from_file_search_page.html', **render_template_kwargs)
+        raise_exception_ = True
 
-        def get_entry(kwargs):
+        def get_entry(kwargs, raise_exception=False):
             entry = None
             try:
                 entry, created = api.get_or_create_page_search_image(**kwargs)
@@ -134,6 +135,8 @@ class FromFileSearchImageView(BaseView):
                     models.db.session.add(entry)
                     models.db.session.commit()
             except Exception as err:
+                if raise_exception:
+                    raise err
                 msg = '{} raised:{}'.format(type(err), err)
                 flash(msg, 'danger')
                 app.logger.debug(msg)
@@ -143,7 +146,7 @@ class FromFileSearchImageView(BaseView):
             return empty_response
         if url:
             kwargs = {'url': url, 'search_type': search_type, 'disable_cache': disable_cache}
-            entry = get_entry(kwargs)
+            entry = get_entry(kwargs, raise_exception_)
             if not entry:
                 return empty_response
         elif not file_path or not file_exist:
@@ -160,7 +163,7 @@ class FromFileSearchImageView(BaseView):
                     'search_type': search_type,
                     'disable_cache': disable_cache
                 }
-                entry = get_entry(kwargs)
+                entry = get_entry(kwargs, raise_exception_)
                 if not entry:
                     return empty_response
         app.logger.debug('kwargs: %s', kwargs)
@@ -264,16 +267,16 @@ def run(host='127.0.0.1', port=5000, debug=False, reloader=False, threaded=False
         index_view=admin.HomeView(name='Home', template=admin_templ, url='/'))
     app_admin.add_view(FromFileSearchImageView(name='Image Search', endpoint='f'))
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
-    app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session))
-    app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session))
-    app_admin.add_view(admin.JSONDataView(models.JSONData, models.db.session))
-    app_admin.add_view(admin.ImageURLView(models.ImageURL, models.db.session))
-    app_admin.add_view(admin.TagView(models.Tag, models.db.session))
-    app_admin.add_view(admin.ImageFileView(models.ImageFile, models.db.session))
-    app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session))
-    app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session))
-    app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session))
-    app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session))
+    app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.JSONDataView(models.JSONData, models.db.session, category='History'))
+    app_admin.add_view(admin.ImageURLView(models.ImageURL, models.db.session, category='History'))
+    app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
+    app_admin.add_view(admin.ImageFileView(models.ImageFile, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
+    # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
     model_list = []  # NOTE: may be used later
     for model_item in model_list:
         app_admin.add_view(ModelView(model_item, models.db.session))
