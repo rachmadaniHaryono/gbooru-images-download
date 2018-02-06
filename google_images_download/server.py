@@ -1,6 +1,6 @@
 """Server module."""
 from logging.handlers import TimedRotatingFileHandler
-from pprint import pprint
+import pprint
 import logging
 import os
 import shutil
@@ -146,7 +146,7 @@ def create_app(script_info=None):
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
 
     # routing
-    app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda x:send_from_directory(models.DEFAULT_THUMB_FOLDER, x))  # NOQA
+    app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda filename:send_from_directory(models.DEFAULT_THUMB_FOLDER, filename))  # NOQA
 
     return app
 
