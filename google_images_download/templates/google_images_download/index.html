@@ -23,12 +23,12 @@
           <img style="max-height: 280px; max-width: 280px; " class="img-thumbnail img-responsive center-block" src="{{match_result.thumbnail_url.url}}">
         </a>
         <figcaption>
-	  <a href="{{match_result.img_url.url}}">[{{match_result.img_url.width}}x{{match_result.img_url.height}}]</a>
-	  <a class="icon" href="{{url_for('f.index', url=match_result.img_url.url, search_type=1)}}">
-	    [<span class="fa fa-search glyphicon glyphicon-search"></span> similar]
+	  <a class="btn btn-default btn-xs" href="{{match_result.img_url.url}}">{{match_result.img_url.width}}x{{match_result.img_url.height}}</a>
+	  <a class="btn btn-default btn-xs" href="{{url_for('f.index', url=match_result.img_url.url, search_type=1)}}">
+	    <span class="fa fa-search glyphicon glyphicon-search"></span> similar
 	  </a>
-	  <a class="icon" href="{{url_for('f.index', url=match_result.img_url.url, search_type=2)}}">
-	    [<span class="fa fa-search glyphicon glyphicon-search"></span> size]
+	  <a class="btn btn-default btn-xs" href="{{url_for('f.index', url=match_result.img_url.url, search_type=2)}}">
+	    <span class="fa fa-search glyphicon glyphicon-search"></span> size
 	  </a>
          </figcaption>
       </figure>
