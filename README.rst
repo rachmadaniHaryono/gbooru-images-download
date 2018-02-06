@@ -70,7 +70,7 @@ Usage as server for Hydrus (alpha)
 
 .. code:: bash
 
-  google-images-download-server run -d -p 5001 -t
+  google-images-download-server run -p 5001 --debugger --with-threads
 
 It will run on debug and threaded mode on port 5001
 
