@@ -83,9 +83,9 @@ class FromFileSearchImageView(BaseView):
                 entry = get_entry(kwargs, raise_exception_)
                 if not entry:
                     return empty_response
-        log.debug('kwargs: %s', kwargs)
-        log.debug('search type:%s match results:%s', search_type, len(entry.match_results))
-        log.debug('URL:%s', request.url)
+        log.debug('kwargs: {}'.format(kwargs))
+        log.debug('search type:{} match results:{}'.format(search_type, len(entry.match_results)))
+        log.debug('URL:{}'.format(request.url))
         render_template_kwargs['entry'] = entry
         return self.render(
             'google_images_download/from_file_search_page.html', **render_template_kwargs)
