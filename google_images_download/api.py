@@ -257,6 +257,7 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
     session = gid.models.db.session if session is None else session
     if not((file_path or url) and not (file_path and url)):
         raise ValueError('input url or file_path only')
+    search_image_result_html_dict = None
     if file_path:
         img_file, _ = get_or_create_image_file_with_thumbnail(
             file_path, disable_cache=disable_cache, thumb_folder=thumb_folder)
@@ -266,7 +267,6 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
         instance = gid.models.SearchImage.query.filter_by(searched_img_url=url).first()
         if not instance:
             search_image_result_html_dict = get_search_image_result_html(url=url)
-            html_text = search_image_result_html_dict['html_text']
             search_url = search_image_result_html_dict['search_url']
             instance = gid.models.SearchImage.query.filter_by(searched_img_url=url).first()
             if not instance:
@@ -286,7 +286,7 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
     if created or disable_cache:
         if file_path:
             search_image_result_html_dict = get_search_image_result_html(file_path=file_path)
-        elif url:
+        elif url and not search_image_result_html_dict:
             search_image_result_html_dict = get_search_image_result_html(url=url)
         html_text = search_image_result_html_dict['html_text']
         search_url = search_image_result_html_dict['search_url']
