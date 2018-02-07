@@ -1,5 +1,5 @@
 """Admin module."""
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urljoin
 import textwrap
 
 from flask import request, url_for
@@ -14,53 +14,6 @@ from google_images_download import forms, models, api
 
 
 log = structlog.getLogger(__name__)
-
-
-def url_formatter(_, __, model, name):
-    """URL formatter."""
-    input_url = getattr(model, name)
-    if not input_url:
-        formatted_url = ''
-    else:
-        parsed_url = urlparse(input_url)
-        formatted_url = '<tr><th>Netloc</th><td>{}</td></tr>'.format(parsed_url.netloc)
-        formatted_url += '<tr><th>Path</th><td>{}</td></tr>'.format(parsed_url.path)
-        if parsed_url.fragment:
-            formatted_url += '<tr><th>fragment</th><td>{}</td></tr>'.format(parsed_url.fragment)
-        if parsed_url.query:
-            formatted_url += '<tr><th colspan="2">Query</th></tr>'
-            formatted_q = parse_qs(parsed_url.query)
-            for key, values in formatted_q.items():
-                for val in values:
-                    if val.startswith(('https://', 'http://')):
-                        template = '<tr><th>{0}</th><td><a href="{1}">{1}</a></td></tr>'
-                        formatted_url += template.format(key, val)
-                    else:
-                        formatted_url += '<tr><th>{}</th><td>{}</td></tr>'.format(key, val)
-        template = '<table class="table table-bordered table-condensed">{}</table>'
-        formatted_url = template.format(formatted_url)
-    return Markup(
-        "<a href='{}'>[link]</a><br/>{}".format(input_url, formatted_url)
-    ) if input_url and input_url != '#' else Markup("")
-
-
-def json_formatter(_, __, model, name):
-    """URL formatter."""
-    json_input = getattr(model, name)
-    result = ''
-    for key, val in sorted(json_input.items()):
-        val_str = str(val)
-        if val_str.startswith('/search?'):
-            str_templ = '<tr><th>{}</th><td><a href="https://www.google.com{}">{}</a></td></tr>'
-            result += str_templ.format(
-                str(key), val_str, val_str)
-        elif val_str.startswith(('https://', 'http://')):
-            result += '<tr><th>{}</th><td><a href="{}">{}</a></td></tr>'.format(
-                str(key), val_str, val_str)
-        else:
-            result += '<tr><th>{}</th><td>{}</td></tr>'.format(str(key), val_str)
-    result = '<table class="table table-bordered table-condensed">{}</table>'.format(result)
-    return Markup(result)
 
 
 def date_formatter(_, __, model, name):
@@ -78,6 +31,10 @@ def filesize_formatter(_, __, model, name):
     if data:
         return Markup(humanize.naturalsize(data))
     return Markup('')
+
+
+def get_anchor_tag(url):
+    return Markup('<a href="{}">{}</a>'.format(url, '<br>'.join(textwrap.wrap(url))))
 
 
 class HomeView(AdminIndexView):
@@ -103,15 +60,34 @@ class HomeView(AdminIndexView):
         return self.render('google_images_download/index.html', **template_kwargs)
 
 
-class SearchQueryView(ModelView):
-    """Custom view for SearchQuery model."""
+class CustomModelView(ModelView):
     can_view_details = True
-    column_formatters = {'created_at': date_formatter, }
+    page_size = 100
+    column_default_sort = ('created_at', True)
+
+
+class SearchQueryView(CustomModelView):
+    """Custom view for SearchQuery model."""
+    column_formatters = {
+        'created_at': date_formatter,
+        'search_query':
+        lambda v, c, m, p:
+        Markup('<a href="{}">{}</a>'.format(
+            url_for('admin.index', query=m.search_query),
+            m.search_query
+        )),
+        'page':
+        lambda v, c, m, p:
+        Markup('<a href="{}">{}</a>'.format(
+            url_for('admin.index', query=m.search_query, page=m.page),
+            m.page
+        )),
+    }
     column_searchable_list = ('page', 'search_query')
     column_filters = ('page', 'search_query')
 
 
-class MatchResultView(ModelView):
+class MatchResultView(CustomModelView):
     """Custom view for MatchResult model."""
 
     def _image_formatter(view, context, model, name):
@@ -126,31 +102,66 @@ class MatchResultView(ModelView):
         template = '<a href="{1}"><img class="img-responsive center-block" src="{0}"></a><br>{2}'
         return Markup(template.format(model.thumb_url, model.img_url, desc_table))
 
-    def _thumbnail_formatter(view, context, model, name):
+    @staticmethod
+    def format_thumbnail(m):
         templ = '<a href="{1}"><img src="{0}"></a>'
-        if model.img_url:
-            return Markup(templ.format(model.thumbnail_url.url, model.img_url.url))
-        return Markup(templ.format(model.thumbnail_url.url, model.thumbnail_url.url))
+        if m.img_url:
+            return Markup(templ.format(m.thumbnail_url.url, m.img_url.url))
+        return Markup(templ.format(m.thumbnail_url.url, m.thumbnail_url.url))
 
-    column_formatters = {'created_at': date_formatter, 'thumbnail_url': _thumbnail_formatter, }
-    column_exclude_list = ('imgres_url', 'img_url',)
+    @staticmethod
+    def format_json_data(json_data):
+        return Markup('<p><a href="{}">{}</a></p>'.format(
+            url_for('jsondata.details_view', id=json_data.id), Markup.escape(json_data)))  # NOQA
+
+    @staticmethod
+    def format_search_query(search_query):
+        return Markup('<p><a href="{}">{}</a></p>'.format(
+            url_for('searchquery.details_view', id=search_query.id), Markup.escape(search_query)))
+
+    def _imgref_url_formatter(view, context, model, name):
+        res = Markup('<p>{}</p>'.format(get_anchor_tag(model.imgref_url))) if model.imgref_url else ''  # NOQA
+        res += Markup('<p>{}</p>'.format(MatchResultView.format_thumbnail(model)))
+        if model.search_query:
+            res += MatchResultView.format_search_query(model.search_query)
+        res += MatchResultView.format_json_data(model.json_data)
+        return res
+
+    column_formatters = {
+        'created_at': date_formatter,
+        'json_data': lambda v, c, m, p: MatchResultView.format_json_data(m.json_data),
+        'search_query': lambda v, c, m, p: MatchResultView.format_search_query(m.search_query) if m.search_query else '',  # NOQA
+        'thumbnail_url': lambda v, c, m, p: MatchResultView.format_thumbnail(m),
+        'imgref_url': _imgref_url_formatter,
+        'imgres_url': lambda v, c, m, p: get_anchor_tag(m.imgres_url) if m.imgres_url else '',
+        'img_url': lambda v, c, m, p:
+        Markup("""
+            <p><a href={1}>ID:{0.id},size:{0.width}x{0.height}</a></p>
+            <p><a href="{0.url}">{2}</a></p>""".format(
+            m.img_url,
+            url_for('imageurl.details_view', id=m.img_url.id),
+            '<br>'.join(textwrap.wrap(m.img_url.url))
+        )),
+    }
+    column_exclude_list = ('imgres_url', 'img_url', 'thumbnail_url', 'search_query', 'json_data')
     can_view_details = True
     page_size = 100
 
 
-class JSONDataView(ModelView):
+class JSONDataView(CustomModelView):
     """Custom view for json data model"""
     def _value_formatter(view, context, model, name):
         res = ''
         for key, value in model.value.items():
+            if not value:
+                continue
             res += '<tr><th>{0}</th><td>{1}</td></tr>'.format(key, value)
         res = '<table class="table table-bordered table-condensed">{}</table>'.format(res)
         return Markup(res)
-    can_view_details = True
     column_formatters = {'created_at': date_formatter, 'value': _value_formatter, }
 
 
-class ImageURLView(ModelView):
+class ImageURLView(CustomModelView):
     """Custom view for ImageURL model."""
 
     def _url_formatter(view, context, model, name):
@@ -175,44 +186,63 @@ class ImageURLView(ModelView):
         shorted_url = '<br>'.join(textwrap.wrap(model.url))
         return Markup(templ.format(model.url, model.url, shorted_url, img_view_url))
 
-    can_view_details = True
     column_searchable_list = ('url', 'width', 'height')
     column_filters = ('width', 'height')
     column_formatters = {'created_at': date_formatter, 'url': _url_formatter, }
-    page_size = 100
-    column_default_sort = ('created_at', True)
     form_ajax_refs = {'tags': {'fields': ['namespace', 'name'], 'page_size': 10}}
 
 
-class TagView(ModelView):
+class TagView(CustomModelView):
     """Custom view for Tag model."""
 
     column_searchable_list = ('namespace', 'name')
     column_filters = ('namespace', 'name')
     column_formatters = {'created_at': date_formatter, }
-    column_default_sort = ('created_at', True)
-    page_size = 100
 
 
-class ImageFileView(ModelView):
+class ImageFileView(CustomModelView):
     """Custom view for ImageFile model."""
 
-    def _thumbnail_formatter(view, context, model, name):
+    @staticmethod
+    def _format(thumbnail):
+        return Markup("""
+            <p>Thumbnail:
+            <a href="{}">{}</a>
+            <a href="{}"><span class="fa fa-pencil glyphicon glyphicon-pencil"></span></a>
+            </p>""".format(
+            url_for('imagefile.details_view', id=thumbnail.id),
+            Markup.escape(str(thumbnail)),
+            url_for('imagefile.edit_view', id=thumbnail.id)
+        ))
+
+    def _checksum_formatter(view, context, model, name):
+        shorted_checksum = Markup('<p>Checksum:' + '<br>'.join(textwrap.wrap(model.checksum)) + '</p>')  # NOQA
         if not model.thumbnail:
-            return
-        return Markup('<img src="{}">'.format(url_for(
-            'thumbnail', filename=model.thumbnail.checksum + '.jpg')))
+            return shorted_checksum
+        thumbnail_a_tag = Markup("""
+            <p>Thumbnail:
+            <a href="{}">{}</a>
+            <a href="{}"><span class="fa fa-pencil glyphicon glyphicon-pencil"></span></a>
+            </p>""".format(
+            url_for('imagefile.details_view', id=model.thumbnail.id),
+            Markup.escape(str(model.thumbnail)),
+            url_for('imagefile.edit_view', id=model.thumbnail.id)
+        ))
+        figcaption = shorted_checksum + thumbnail_a_tag
+        return Markup('<figure><img src="{}"><figcaption>{}</figcaption></figure>'.format(
+            url_for('thumbnail', filename=model.thumbnail.checksum + '.jpg'),
+            figcaption
+        ))
 
     column_formatters = {
         'created_at': date_formatter,
         'size': filesize_formatter,
-        'thumbnail': _thumbnail_formatter,
+        'checksum': _checksum_formatter
     }
-    can_view_details = True
-    page_size = 100
+    column_exclude_list = ('thumbnail',)
 
 
-class SearchImageView(ModelView):
+class SearchImageView(CustomModelView):
     """Custom view for SearchImage model."""
 
     def _result_formatter(view, context, model, name):
@@ -223,50 +253,55 @@ class SearchImageView(ModelView):
             res += ', <a href="{}">similar</a>'.format(model.similar_search_url)
         return Markup(res)
 
-    @staticmethod
-    def _format_searched_img_url(url):
-        url_text = url
-        if not url:
-            return
-        if url.startswith('https://'):
-            url_text = url.replace('https://', '', 1)
-        elif url.startswith('http://'):
-            url_text = url.replace('http://', '', 1)
-        return '<a href="{}">{}</a>'.format(url, url_text)
-
-    def _input_search_formatter(view, context, model, name):
-        res = ''
+    def _img_guess_formatter(view, context, model, name):
+        res = '<p>Image guess: {}</p>'.format(model.img_guess) if model.img_guess else ''
         if model.img_file:
-            res += '<p>Image File</p>'
+            res += '<p>Image File:</p>'
             if model.img_file.thumbnail:
-                res += '<figure><img src="{}"><figcaption>{}</figcaption><figure>'.format(
-                    url_for('thumbnail', filename=model.img_file.thumbnail.checksum + '.jpg'),
-                    Markup.escape(model.img_file)
-                )
+                res += \
+                    """<figure>
+                    <img src="{}">
+                    <figcaption>{}</figcaption>
+                    <figure>""".format(
+                        url_for('thumbnail', filename=model.img_file.thumbnail.checksum + '.jpg'),
+                        Markup.escape(model.img_file)
+                    )
             else:
                 res += '<p>{}</p>'.format(model.img_file)
         if model.searched_img_url:
-            res += '<p>Searched Url</p>'
-            res += SearchImageView._format_searched_img_url(model.searched_img_url)
+            res += '<p>Searched Url:</p>'
+            res += '<a href="{}">{}</a>'.format(
+                model.searched_img_url,
+                '<br>'.join(textwrap.wrap(model.searched_img_url)))
         return Markup(res)
 
     column_formatters = {
         'created_at': date_formatter,
         'Result': _result_formatter,
-        'Input': _input_search_formatter,
-        'searched_img_url': lambda v, c, m, p: Markup(
-            SearchImageView._format_searched_img_url(m.searched_img_url)
-            if m.searched_img_url else ''
-        ),
+        'img_guess': _img_guess_formatter,
+        'search_url':
+            lambda v, c, m, p: Markup('<a href="{1}">{0}</a>'.format(
+                Markup('<br>'.join(textwrap.wrap(m.search_url))),
+                m.search_url
+            )),
+        'similar_search_url':
+            lambda v, c, m, p: Markup('<a href="{1}">{0}</a>'.format(
+                Markup('<br>'.join(textwrap.wrap(m.similar_search_url))),
+                m.similar_search_url
+            )) if m.similar_search_url else Markup(''),
+        'size_search_url':
+            lambda v, c, m, p: Markup('<a href="{1}">{0}</a>'.format(
+                Markup('<br>'.join(textwrap.wrap(m.size_search_url))),
+                m.size_search_url
+            )) if m.size_search_url else Markup(''),
     }
     column_exclude_list = (
         'search_url', 'similar_search_url', 'size_search_url', 'searched_img_url', 'img_file', )
-    can_view_details = True
     column_searchable_list = ('searched_img_url', )
-    column_list = ('img_file', 'created_at', 'searched_img_url', 'img_guess', 'Result', 'Input')
+    column_list = ('img_file', 'created_at', 'searched_img_url', 'img_guess', 'Result')
 
 
-class SearchImagePageView(ModelView):
+class SearchImagePageView(CustomModelView):
     """Custom view for SearchImagePage model."""
 
     column_formatters = dict(
@@ -274,28 +309,35 @@ class SearchImagePageView(ModelView):
         search_type=lambda v, c, m, p: m.search_type.value
     )
     column_exclude_list = ('search_url', 'similar_search_url', 'size_search_url', )
-    can_view_details = True
 
 
-class TextMatchView(ModelView):
+class TextMatchView(CustomModelView):
     """Custom view for TextMatch model."""
 
-    can_view_details = True
     column_formatters = {
         'created_at': date_formatter,
         'content': lambda v, c, m, p: Markup(
-            '<h4>{0}</h4><p>{1}</p><a href="{2}">{4}</a><p>{3}</p>'.format(
+            """<h4>{0}</h4>
+            <div>
+                <p>{1}</p>
+                <a href="{2}">{4}</a>
+                <p>{3}</p>
+                <p>Image: {5}</p>
+                <p>Thumbnail: {6}</p>
+            </div>""".format(
                 m.title,
                 '<br>'.join(textwrap.wrap(m.text)),
                 m.url,
                 m.url_text,
                 '<br>'.join(textwrap.wrap(m.url)),
+                Markup.escape(str(m.img_url)) or '',
+                Markup.escape(str(m.thumbnail_url)) or '',
             )
         ),
     }
     column_searchable_list = ('url', 'url_text', 'text', 'title')
     column_filters = ('url_text', 'text', 'title')
-    column_exclude_list = ('imgres_url', 'imgref_url', )
+    column_exclude_list = ('imgres_url', 'imgref_url', 'img_url', 'thumbnail_url')
     column_list = (
         'search_image_model',
         'img_url',
@@ -303,18 +345,19 @@ class TextMatchView(ModelView):
         'created_at',
         'content',
     )
-    page_size = 50
-    column_default_sort = ('created_at', True)
 
 
-class MainSimilarResultView(ModelView):
-    """Custom view for SearchImagePage model."""
+class MainSimilarResultView(CustomModelView):
+    """Custom view for Main similar result view model."""
 
     column_formatters = dict(
         created_at=date_formatter,
-        img_title=lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(m.img_title))
+        img_title=lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(m.img_title)),
+        search_url=lambda v, c, m, p: Markup('<a href="{0}">{1}</a>'.format(
+            urljoin('https://www.google.com', m.search_url),
+            Markup('<br>'.join(textwrap.wrap(m.search_url)))
+        )),
     )
     column_exclude_list = ('search_url', 'img_src', )
-    can_view_details = True
     column_searchable_list = ('img_title', 'img_width', 'img_height')
     column_filters = ('img_title', 'img_width', 'img_height')
