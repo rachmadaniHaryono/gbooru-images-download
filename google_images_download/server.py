@@ -40,17 +40,17 @@ class FromFileSearchImageView(BaseView):
         disable_cache = form.disable_cache.data
         render_template_kwargs = {'entry': None, 'form': form}
         file_exist = os.path.isfile(file_path) if file_path is not None else False
-        empty_response = self.render(
-            'google_images_download/from_file_search_page.html', **render_template_kwargs)
         raise_exception_ = True
 
         def get_entry(kwargs, raise_exception=False):
             entry = None
+            session = kwargs.get('session', None)
+            session = models.db.session if session is None else session
             try:
                 entry, created = api.get_or_create_page_search_image(**kwargs)
                 if created or disable_cache:
-                    models.db.session.add(entry)
-                    models.db.session.commit()
+                    session.add(entry)
+                    session.commit()
             except Exception as err:
                 if raise_exception:
                     raise err
@@ -59,36 +59,31 @@ class FromFileSearchImageView(BaseView):
                 log.debug(msg)
             return entry
 
+        entry = None
+        session = models.db.session
+        kwargs = {'search_type': search_type, 'disable_cache': disable_cache, 'session': session}
         if not file_path and not url:
-            return empty_response
-        if url:
-            kwargs = {'url': url, 'search_type': search_type, 'disable_cache': disable_cache}
+            pass
+        elif url:
+            kwargs['url'] = url
             entry = get_entry(kwargs, raise_exception_)
-            if not entry:
-                return empty_response
-        elif not file_path or not file_exist:
-            if not file_exist:
-                msg = 'File not exist: {}'.format(file_path)
-                log.debug(msg)
-                flash(msg, 'danger')
-            return empty_response
+        elif file_path and not file_exist:
+            msg = 'File not exist: {}'.format(file_path)
+            log.debug(msg)
+            flash(msg, 'danger')
         else:
             with tempfile.NamedTemporaryFile() as temp:
                 shutil.copyfile(file_path, temp.name)
-                kwargs = {
-                    'file_path': temp.name,
-                    'search_type': search_type,
-                    'disable_cache': disable_cache
-                }
+                kwargs['file_path'] = temp.name
                 entry = get_entry(kwargs, raise_exception_)
-                if not entry:
-                    return empty_response
         log.debug('kwargs: {}'.format(kwargs))
-        log.debug('search type:{} match results:{}'.format(search_type, len(entry.match_results)))
+        log.debug('search type:{} match results:{}'.format(
+            search_type,
+            len(entry.match_results) if entry else 0)
+        )
         log.debug('URL:{}'.format(request.url))
         render_template_kwargs['entry'] = entry
-        return self.render(
-            'google_images_download/from_file_search_page.html', **render_template_kwargs)
+        return self.render('google_images_download/from_file_search_page.html', **render_template_kwargs)  # NOQA
 
 
 def create_app(script_info=None):

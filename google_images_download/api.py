@@ -11,6 +11,7 @@ import requests
 import structlog
 try:
     from selenium import webdriver
+    from selenium.webdriver.firefox.options import Options
     SELENIUM_ENABLED = True
 except ImportError:
     SELENIUM_ENABLED = False
@@ -33,10 +34,9 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
     parsed_url = urlparse('https://www.google.com/search')
     query_url = parsed_url._replace(query=urlencode(url_query)).geturl()
     kwargs = {'search_query': query, 'page': page}
-    model, created = gid.models.get_or_create(
-        session, gid.models.SearchQuery, **kwargs)
-    debug_kwargs = dict(
-        search_query_id=model.id, page=page, created=created, cache_disabled=disable_cache)
+    model, created = gid.models.get_or_create(session, gid.models.SearchQuery, **kwargs)
+    debug_kwargs = \
+        dict(search_query_id=model.id, page=page, created=created, cache_disabled=disable_cache)
     log.debug('SearchQuery', **debug_kwargs)
     if created or disable_cache:
         log.debug('query url', url=query_url)
@@ -54,14 +54,13 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
 def parse_match_result_html_tag(html_tag):
     """Get or create match result from json response"""
     kwargs = {'imgres_url': html_tag.select_one('a').get('href', None)}
-    kwargs['imgref_url'] = parse_qs(
-        urlparse(kwargs['imgres_url']).query).get('imgrefurl', [None])[0]
+    kwargs['imgref_url'] = \
+        parse_qs(urlparse(kwargs['imgres_url']).query).get('imgrefurl', [None])[0]
 
     # json data
     json_data = json.loads(html_tag.select_one('.rg_meta').text)
     if 'msu' in json_data and json_data['msu'] != json_data['si']:
-        log.warning(
-            "msu-value different with si-value", msu=json_data['msu'], si=json_data['si'])
+        log.warning("msu-value different with si-value", msu=json_data['msu'], si=json_data['si'])
     kwargs['json_data'] = json_data
 
     # image url
@@ -128,8 +127,8 @@ def get_or_create_match_result_from_html_soup(html_tag, search_query=None, sessi
     """Get or create match result from html_soup"""
     session = gid.models.db.session if session is None else session
     kwargs = parse_match_result_html_tag(html_tag)
-    kwargs['json_data'] = json_data = gid.models.get_or_create(
-        session, gid.models.JSONData, value=kwargs['json_data'])[0]
+    kwargs['json_data'] = json_data = \
+        gid.models.get_or_create(session, gid.models.JSONData, value=kwargs['json_data'])[0]
     kwargs['json_data_id'] = json_data.id
     # image url
     kwargs['img_url'] = img_url = \
@@ -145,16 +144,14 @@ def get_or_create_match_result_from_html_soup(html_tag, search_query=None, sessi
     if search_query:
         kwargs['search_query'] = search_query
     if not search_query:
-        model, created = gid.models.get_or_create(
-            session, gid.models.MatchResult, **kwargs)
+        model, created = gid.models.get_or_create(session, gid.models.MatchResult, **kwargs)
     else:
         new_kwargs = {
             'search_query': search_query,
             'img_url': img_url,
             'thumbnail_url': thumbnail_url,
         }
-        model, created = gid.models.get_or_create(
-            session, gid.models.MatchResult, **new_kwargs)
+        model, created = gid.models.get_or_create(session, gid.models.MatchResult, **new_kwargs)
         for key, value in kwargs.items():
             setattr(model, key, value)
     return model, created
@@ -178,8 +175,7 @@ def add_tags_to_image_url(img_url, tags, session=None):
     for tag in tags:
         if not tag['name']:
             log.debug('tag only contain namespace', namespace=tag['namespace'])
-        tag_m, _ = gid.models.get_or_create(
-            session, gid.models.Tag, **tag)
+        tag_m, _ = gid.models.get_or_create(session, gid.models.Tag, **tag)
         if tag_m not in img_url.tags:
             img_url.tags.append(tag_m)
         tags_models.append(tag_m)
@@ -190,6 +186,22 @@ def get_html_text_from_search_url(search_url=None, url=None):
     """Get HTML text from search url"""
     if not((search_url or url) and not (search_url and url)):
         raise ValueError('search url or image url only')
+
+    def get_html_text_with_selenium(url):
+        options = Options()
+        options.add_argument("--headless")
+        wd = webdriver.Firefox(firefox_options=options)
+        new_su = parse_qs(urlparse(url).query).get('continue', [None])[0]
+        if not new_su:
+            raise ValueError('Unknown format: {}'.format(url))
+        else:
+            search_url_res = new_su
+        wd.get(search_url_res)
+        html_text = wd.page_source
+        wd.close()
+        log.debug('webdriver closed')
+        return html_text, search_url_res
+
     user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1'  # NOQA
     headers = {'User-Agent': user_agent}
     url_templ = 'https://www.google.com/searchbyimage?image_url={}&safe=off'
@@ -200,21 +212,18 @@ def get_html_text_from_search_url(search_url=None, url=None):
     parsed_su = urlparse(search_url)
     # su = search_url
     su_redirected = (parsed_su.netloc, parsed_su.path) == ('ipv4.google.com', '/sorry/index')
+
     if su_redirected and SELENIUM_ENABLED:
-        wd = webdriver.Firefox()
-        new_su = parse_qs(parsed_su.query).get('continue', [None])[0]
-        if not new_su:
-            raise ValueError('Unknown format: {}'.format(search_url))
-        else:
-            search_url = new_su
-        wd.get(search_url)
-        html_text = wd.page_source
-        wd.close()
+        html_text, search_url = get_html_text_with_selenium(url=search_url)
     elif search_url:
         resp = requests.get(search_url, headers=headers, timeout=10)
+        parsed_su = urlparse(resp.url)
+        su_redirected = (parsed_su.netloc, parsed_su.path) == ('ipv4.google.com', '/sorry/index')
         html_text = resp.text
         keyword_text = 'Our systems have detected unusual traffic from your computer network.'
-        if keyword_text in html_text:
+        if keyword_text in html_text and su_redirected and SELENIUM_ENABLED:
+            html_text, search_url = get_html_text_with_selenium(url=resp.url)
+        elif keyword_text in html_text:
             raise ValueError('Unusual traffic detected')
     else:
         raise ValueError('Unknown condition, search url: {} url: {}'.format(search_url, url))
@@ -259,8 +268,8 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
         raise ValueError('input url or file_path only')
     search_image_result_html_dict = None
     if file_path:
-        img_file, _ = get_or_create_image_file_with_thumbnail(
-            file_path, disable_cache=disable_cache, thumb_folder=thumb_folder)
+        img_file = get_or_create_image_file_with_thumbnail(
+            file_path, disable_cache=disable_cache, thumb_folder=thumb_folder)[0]
         model, created = gid.models.get_or_create(
             session, gid.models.SearchImage, img_file=img_file)
     elif url:
@@ -385,6 +394,7 @@ def get_or_create_page_search_image(file_path=None, url=None, **kwargs):
         **search_type: search type
         **page: page
         **disable_cache: disable cache
+        **session: database session
 
     """
     # kwargs
@@ -400,8 +410,8 @@ def get_or_create_page_search_image(file_path=None, url=None, **kwargs):
         raise ValueError('input url or file_path only')
 
     session = gid.models.db.session if session is None else session
-    sm_model, _ = get_or_create_search_image(
-        file_path, url=url, disable_cache=disable_cache, session=session)
+    sm_model_kwargs = dict(url=url, disable_cache=disable_cache, session=session)
+    sm_model = get_or_create_search_image(file_path, **sm_model_kwargs)[0]
     kwargs = {'search_img': sm_model, 'search_type': search_type, 'page': page}
     model, created = gid.models.get_or_create(
         session, gid.models.SearchImagePage, **kwargs
@@ -457,7 +467,7 @@ def get_or_create_image_file_with_thumbnail(file_path, **kwargs):
         img_file.thumbnail = img_file
     elif not is_thumbnail_exist:
         thumbnail_file = create_thumbnail(file_path, thumb_folder)
-        log.debug('thumbnail created', m=thumbnail_file, folder=thumb_folder)
+        log.debug('thumbnail created', m=thumbnail_file)
         thumbnail_file_model, _ = \
             get_or_create_image_file(thumbnail_file, disable_cache=disable_cache, session=session)
         thumbnail_file_model.thumbnail = thumbnail_file_model

@@ -144,6 +144,7 @@ class MatchResultView(CustomModelView):
         )),
     }
     column_exclude_list = ('imgres_url', 'img_url', 'thumbnail_url', 'search_query', 'json_data')
+    column_searchable_list = ('imgref_url', 'search_query.search_query')
     can_view_details = True
     page_size = 100
 
@@ -254,7 +255,10 @@ class SearchImageView(CustomModelView):
         return Markup(res)
 
     def _img_guess_formatter(view, context, model, name):
-        res = '<p>Image guess: {}</p>'.format(model.img_guess) if model.img_guess else ''
+        res = '<p>Image guess: {}</p>'.format(
+            Markup('<a href={}>{}</a>'.format(
+                url_for('admin.index', query=model.img_guess), model.img_guess))
+        ) if model.img_guess else ''
         if model.img_file:
             res += '<p>Image File:</p>'
             if model.img_file.thumbnail:

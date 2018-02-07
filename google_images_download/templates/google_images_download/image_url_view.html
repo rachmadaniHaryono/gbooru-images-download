@@ -29,13 +29,16 @@
 
 {% for match_result in entry.match_results %}
   <table class="table table-condensed table-bordered">
-    <tr><th>ID</th><td>{{match_result.id}}</td></tr>
+    <tr><th>ID</th>
+      <td><a href="{{url_for('matchresult.details_view', id=match_result.id)}}">{{match_result.id}}</a></td>
+    </tr>
     {% for key, value in match_result.__dict__.items() %}
-      {% if key == 'imgref_url' and value %}
+      {% if key in ['_sa_instance_state', 'imgres_url', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
+      {% elif key == 'imgref_url' and value %}
       <tr><th>{{key|replace('_', ' ')}}</th><td><a class="tag-page-url" href="{{href}}">{{value}}</a></td></tr>
       {% elif key == 'search_query' and value %}
       <tr><th>{{key|replace('_', ' ')}}</th><td><a class="tag-query" href="{{href}}">{{value.search_query}}</a>, page:{{value.page}}</td></tr>
-      {% elif key not in ['_sa_instance_state', 'imgres_url', 'id', 'thumbnail_url_id', 'search_query_id', 'json_data_id', 'img_url_id', 'imgref_url', 'search_query', ] %}
+      {% else %}
       <tr><th>{{key|replace('_', ' ')}}</th><td>{{value}}</td></tr>
       {% endif %}
     {% endfor %}
