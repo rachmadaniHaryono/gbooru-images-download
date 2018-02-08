@@ -1,5 +1,6 @@
 """Server module."""
 from logging.handlers import TimedRotatingFileHandler
+from urllib.parse import unquote_plus
 import pprint
 import logging
 import os
@@ -7,8 +8,9 @@ import shutil
 import tempfile
 
 from appdirs import user_data_dir
-from flask import Flask, request, flash, send_from_directory
+from flask import Flask, request, flash, send_from_directory, jsonify
 from flask.cli import FlaskGroup
+from flask.views import View
 from flask_admin import Admin, BaseView, expose
 import click
 import structlog
@@ -86,6 +88,59 @@ class FromFileSearchImageView(BaseView):
         return self.render('google_images_download/from_file_search_page.html', **render_template_kwargs)  # NOQA
 
 
+class ThreadJsonView(View):
+
+    def dispatch_request(self, search_query=None, page=1):
+        """Dispatch request.
+        Return format:
+
+        {'page title': <search_query>,
+        'posts':[
+            {'url': <>, 'query': [<search_query>, <>, ...], 'page url':[<>, ...],
+            'subtitle':[<>, ...], 'title': [<>, ...], site: <>, 'site title': [<>, ...]},
+            ...
+        ]}
+        """
+        session = models.db.session
+        disable_cache = False
+        kwargs = dict(query=search_query, page=page, disable_cache=disable_cache, session=session)
+        model, created = api.get_or_create_search_query(**kwargs)
+        if created or disable_cache:
+            session.add(model)
+            session.commit()
+        res = {
+            'page title': search_query, 'posts': [],
+            'source time': int(model.created_at.timestamp())}
+        for match_result in model.match_results:
+            post = {}
+            post['url'] = match_result.img_url.url
+            post['source time'] = int(match_result.created_at.timestamp())
+            post['filename'] = unquote_plus(os.path.splitext(os.path.basename(post['url']))[0])
+            post['query'] = [search_query]
+            post['tags'] = []
+            post['page url'] = [match_result.imgref_url] if match_result.imgref_url else []
+            for tag in match_result.img_url.tags:
+                if not tag.namespace:
+                    post['tags'].append(tag.name)
+                else:
+                    post.setdefault(tag.namespace, []).append(tag.name)
+                # backward compatibiliy
+                if tag.namespace == 'image page url':
+                    post.setdefault('page url', []).append(tag.name)
+            for other_mr in match_result.img_url.match_results:
+                if other_mr == match_result:
+                    continue
+                if other_mr.search_query:
+                    post['query'].append(other_mr.search_query.search_query)
+                if other_mr.imgref_url:
+                    post['page url'].append(other_mr.imgref_url)
+            # remove duplicate
+            post['query'] = list(set(post['query']))
+            post['page url'] = list(set(post['page url']))
+            res['posts'].append(post)
+        return jsonify(res)
+
+
 def create_app(script_info=None):
     """create app."""
     app = Flask(__name__)
@@ -142,7 +197,9 @@ def create_app(script_info=None):
 
     # routing
     app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda filename:send_from_directory(models.DEFAULT_THUMB_FOLDER, filename))  # NOQA
-
+    thread_json_view = ThreadJsonView.as_view("thread_json")
+    app.add_url_rule('/tj/<path:search_query>', view_func=thread_json_view)
+    app.add_url_rule('/tj/<path:search_query>/<int:page>', view_func=thread_json_view)
     return app
 
 
