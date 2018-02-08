@@ -175,6 +175,62 @@ Google image size search from image url
 3. Search the image. For similar image search and size image search you need to input image path.
 
 
+To use it with hydrus thread watcher (starting from hydrus version 293)
+
+1. Import url class config (network > manage url classes > import)
+
+2. Import parser (network > manage parsers > import)
+
+3. Check that 'gid json thread' connected with gid thread api parser (network > manage url class links)
+
+4. To run it open new thread watcher tab. put following format into input ``http://127.0.0.1:5001/tj/{search_query}``
+   as example ``http://127.0.0.1:5001/tj/red picture`` to search ``red picture``
+
+
+Url class config:
+
+.. code:: yaml
+
+  [50, "gid json thread", 2,
+    [
+      "798db19c8a2a36c849edaf9c0536aafcc4da9b57519446848e82c2437244578c", 4, "http", "127.0.0.1:5001", false, false,
+      [26, 1, [[51, 1, [0, "tj", null, null, "tj"]], [51, 1, [3, "", null, null, "page.php"]]]],
+      [21, 1, [[], [], [], []]],
+      [55, 1, [[], "https://hostname.com/post/page.php?id=123456&s=view"]],
+      "http://127.0.0.1:5001/tj/red block"
+    ]
+  ]
+
+Parser config:
+
+.. code:: yaml
+
+  [58, "gid thread api parser", 2, ["gid thread api parser", "addbc3110c74d2e204f7cfe3c088b51db144402d5a7403b894e382bea1ff5dca",
+  [55, 1, [[], "example string"]], [[[31, 1, [["posts", null], 1, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], [58, "posts", 2, ["posts", "48bbd8246b932f5411e27c19802e19b29680a4fc6bd7afbd88712e2ace506ad3",
+  [55, 1, [[], "example string"]], [], [26, 1, [[30, 2, ["file url", 7, [31, 1,
+  [["url"], 0, [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], [0, 50]]],
+  [30, 2, ["filename", 0, [31, 1, [["filename"], 0, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], "filename"]], [30, 2, ["page url", 0, [31, 1, [["page url", null], 0,
+  [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], "gid page url"]],
+  [30, 2, ["query", 0, [31, 1, [["query", null], 0, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], "gid query"]], [30, 2, ["site", 0, [31, 1, [["site", null], 0,
+  [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], "gid site"]],
+  [30, 2, ["site title", 0, [31, 1, [["site title", null], 0, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], "gid site title"]], [30, 2, ["source time", 16,
+  [31, 1, [["source time"], 0, [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0]],
+  [30, 2, ["subtitle", 0, [31, 1, [["subtitle", null], 0, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], "gid subtitle"]], [30, 2, ["tags", 0, [31, 1, [["tags", null], 0,
+  [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], ""]],
+  [30, 2, ["title", 0, [31, 1, [["title", null], 0, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], "gid title"]], [30, 2, ["veto if no file", 8,
+  [31, 1, [["url"], 0, [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]],
+  [false, [51, 1, [3, "", null, null, "example string"]]]]]]], [], {}]]]],
+  [26, 1, [[30, 2, ["page title", 17, [31, 1, [["page title"], 0, [51, 1, [3, "", null, null, "example string"]],
+  [55, 1, [[], "parsed information"]]]], 0]], [30, 2, ["source time", 16, [31, 1, [["source time"], 0,
+  [51, 1, [3, "", null, null, "example string"]], [55, 1, [[], "parsed information"]]]], 0]]]],
+  ["127.0.0.1:5001/tj/red block", "127.0.0.1:5001/tj/red block/1", "127.0.0.1:5001/tj/red block/2"], {}]]
+
 Installation
 ------------
 
