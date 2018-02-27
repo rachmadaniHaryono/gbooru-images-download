@@ -3,11 +3,20 @@
 # C extensions
 *.so
 
+#env
+env/
+env
+# pycharm
+.idea/
+.idea
+
 # Packages
 *.egg
 *.egg-info
 dist
 build
+dist
+dist/*
 eggs
 parts
 bin
@@ -27,14 +36,29 @@ pip-log.txt
 .tox
 nosetests.xml
 
+# Complexity
+output/*.html
+output/*/index.html
+
+# Sphinx
+docs/_build
+
+# Cookiecutter
+output/
+
 # Translations
 *.mo
 
 # Vim
 *.sw[op]
 
+# Sphinx
+docs/_build
 # PyCharm
 .idea
+
+# Cookiecutter
+output/
 
 # Eclipse
 .project

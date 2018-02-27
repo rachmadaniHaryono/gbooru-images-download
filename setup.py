@@ -1,21 +1,20 @@
 """setup."""
-import setuptools
+from setuptools import setup, find_packages
+from codecs import open
+from os import path
 
-setuptools.setup(
-    name="google_images_download",
+# Get the long description from the README file
+with open('README.rst', encoding='utf-8') as f:
+    long_description = f.read()
+
+setup(
+    name='google_images_download',
     version="0.3.1",
+    description="Python Script to download hundreds of images from 'Google Images'. It is a ready-to-run code! ",
+    long_description=long_description,
     url="https://github.com/rachmadaniHaryono/google-images-download",
-
-    author="Hardik Vasa",
-    author_email="hnvasa@gmail.com",
-
-    description="Download hundreds of images from google images",
-    long_description=open('README.rst').read(),
-    keywords="google image downloader",
-    license="MIT",
-
-    packages=setuptools.find_packages(),
-    include_package_data=True,
+    download_url='https://github.com/rachmadaniHaryono/google-images-download/tarball/' + __version__,
+    license='MIT',
     zip_safe=True,
 
     install_requires=[
@@ -45,17 +44,25 @@ setuptools.setup(
         ],
     },
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python',
     ],
-
+    keywords="google image downloader",
+    packages=find_packages(exclude=['docs', 'tests*']),
+    include_package_data=True,
+    author='Hardik Vasa',
+    author_email="hnvasa@gmail.com",
     entry_points={
         'console_scripts': [
+            'googleimagesdownload = google_images_download.__init__:main'
             'google-images-download = google_images_download.__main__:cli',
             'google-images-download-server = google_images_download.server:cli'
-        ]
-    },
+        ]},
+
 )
