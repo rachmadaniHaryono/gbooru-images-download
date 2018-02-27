@@ -13,7 +13,8 @@ setup(
     description="Python Script to download hundreds of images from 'Google Images'. It is a ready-to-run code! ",
     long_description=long_description,
     url="https://github.com/rachmadaniHaryono/google-images-download",
-    download_url='https://github.com/rachmadaniHaryono/google-images-download/tarball/' + __version__,
+    # uncomment if tarball is provided on github
+    # download_url='https://github.com/rachmadaniHaryono/google-images-download/tarball/' + __version__,
     license='MIT',
     zip_safe=True,
 
