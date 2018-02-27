@@ -1,7 +1,6 @@
 """setup."""
 from setuptools import setup, find_packages
 from codecs import open
-from os import path
 
 # Get the long description from the README file
 with open('README.rst', encoding='utf-8') as f:
@@ -10,11 +9,14 @@ with open('README.rst', encoding='utf-8') as f:
 setup(
     name='google_images_download',
     version="0.3.1",
-    description="Python Script to download hundreds of images from 'Google Images'. It is a ready-to-run code! ",
+    description="Python Script"
+    " to download hundreds of images from 'Google Images'. "
+    "It is a ready-to-run code! ",
     long_description=long_description,
     url="https://github.com/rachmadaniHaryono/google-images-download",
     # uncomment if tarball is provided on github
-    # download_url='https://github.com/rachmadaniHaryono/google-images-download/tarball/' + __version__,
+    # download_url='https://github.com/"
+    # "rachmadaniHaryono/google-images-download/tarball/' + __version__,
     license='MIT',
     zip_safe=True,
 
