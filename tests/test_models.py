@@ -6,7 +6,7 @@ from PIL import Image
 import pytest
 import vcr
 
-from google_images_download import models
+from gbooru_images_download import models
 
 
 @pytest.fixture()

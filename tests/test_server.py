@@ -7,8 +7,8 @@ import unittest
 import pytest
 import vcr
 
-from google_images_download import server
-from google_images_download import models
+from gbooru_images_download import server
+from gbooru_images_download import models
 
 
 logging.basicConfig(level=logging.DEBUG)

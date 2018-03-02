@@ -4,7 +4,7 @@ import requests
 import vcr
 from PIL import Image
 
-from google_images_download import api, models
+from gbooru_images_download import api, models
 
 
 @pytest.fixture()

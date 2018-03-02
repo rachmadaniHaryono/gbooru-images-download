@@ -12,5 +12,5 @@ install:
 # command to run tests
 script:
   #- pipenv run -- pylint --rcfile .pylintrc ./google_images_download
-  - pipenv run -- flake8
-  - pipenv run -- pytest -m 'not no_travis'
+  - pipenv run flake8
+  - pipenv run pytest -m 'not no_travis'

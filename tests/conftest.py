@@ -3,7 +3,7 @@ from flask import Flask
 import pytest
 import structlog
 
-from google_images_download import models
+from gbooru_images_download import models
 
 
 log = structlog.getLogger(__name__)
