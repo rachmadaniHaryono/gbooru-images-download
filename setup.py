@@ -27,7 +27,7 @@ setup(
     zip_safe=True,
 
     install_requires=install_requires,
-    setup_requires=['pytest-runner', ],
+    setup_requires=['pytest-runner', 'pipenv'],
     tests_require=tests_require,
     classifiers=[
         'Development Status :: 3 - Alpha',
