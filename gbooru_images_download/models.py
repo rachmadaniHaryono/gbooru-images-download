@@ -11,7 +11,8 @@ from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
 import structlog
 
 
-DEFAULT_THUMB_FOLDER = os.path.join(user_data_dir('gbooru_images_download', 'hardikvasa'), 'thumb')  # NOQA
+APP_DATA_DIR = user_data_dir('gbooru_images_download', 'rachmadaniharyono')
+DEFAULT_THUMB_FOLDER = os.path.join(APP_DATA_DIR, 'thumb')
 log = structlog.getLogger(__name__)
 db = SQLAlchemy()
 

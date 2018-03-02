@@ -145,10 +145,12 @@ def create_app(script_info=None):
     """create app."""
     app = Flask(__name__)
     # logging
-    directory = 'log'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    default_log_file = os.path.join(directory, 'gbooru_images_download_server.log')
+    if not os.path.exists(models.APP_DATA_DIR):
+        os.makedirs(models.APP_DATA_DIR)
+    log_dir = os.path.join(models.APP_DATA_DIR, 'log')
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    default_log_file = os.path.join(log_dir, 'gbooru_images_download_server.log')
     file_handler = TimedRotatingFileHandler(default_log_file, 'midnight')
     file_handler.setLevel(logging.WARNING)
     file_handler.setFormatter(logging.Formatter('<%(asctime)s> <%(levelname)s> %(message)s'))
@@ -169,6 +171,7 @@ def create_app(script_info=None):
         app.config['LOGGER_HANDLER_POLICY'] = 'debug'
         logging.basicConfig(level=logging.DEBUG)
         pprint.pprint(app.config)
+        print('Log file: {}'.format(default_log_file))
     # app and db
     models.db.init_app(app)
     app.app_context().push()
@@ -180,7 +183,7 @@ def create_app(script_info=None):
 
     # flask-admin
     app_admin = Admin(
-        app, name='Google images download', template_mode='bootstrap3',
+        app, name='Gbooru images download', template_mode='bootstrap3',
         index_view=admin.HomeView(name='Home', template='gbooru_images_download/index.html', url='/'))  # NOQA
     app_admin.add_view(FromFileSearchImageView(name='Image Search', endpoint='f'))
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
