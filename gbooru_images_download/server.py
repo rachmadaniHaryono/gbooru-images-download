@@ -12,6 +12,9 @@ from flask import Flask, request, flash, send_from_directory, jsonify
 from flask.cli import FlaskGroup
 from flask.views import View
 from flask_admin import Admin, BaseView, expose
+from flask_admin._compat import text_type
+from flask_admin.contrib.sqla import fields
+from sqlalchemy.orm.util import identity_key
 import click
 import structlog
 
@@ -139,6 +142,19 @@ class ThreadJsonView(View):
             post['page url'] = list(set(post['page url']))
             res['posts'].append(post)
         return jsonify(res)
+
+
+def get_pk_from_identity(obj):
+    """Monkey patck to fix flask-admin sqla error.
+
+    https://github.com/flask-admin/flask-admin/issues/1588
+    """
+    res = identity_key(instance=obj)
+    cls, key = res[0], res[1]  # NOQA
+    return u':'.join(text_type(x) for x in key)
+
+
+fields.get_pk_from_identity = get_pk_from_identity
 
 
 def create_app(script_info=None):
