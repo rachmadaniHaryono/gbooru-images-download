@@ -10,7 +10,7 @@ from jinja2 import Markup
 import humanize
 import structlog
 
-from google_images_download import forms, models, api
+from gbooru_images_download import forms, models, api
 
 
 log = structlog.getLogger(__name__)
@@ -57,7 +57,7 @@ class HomeView(AdminIndexView):
                 models.SearchQuery.query.filter(models.SearchQuery.search_query == query).count()
             template_kwargs['entry'] = model
         template_kwargs['pagination'] = Pagination(**pagination_kwargs)
-        return self.render('google_images_download/index.html', **template_kwargs)
+        return self.render('gbooru_images_download/index.html', **template_kwargs)
 
 
 class CustomModelView(ModelView):

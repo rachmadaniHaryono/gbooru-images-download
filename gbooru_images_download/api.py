@@ -16,8 +16,8 @@ try:
 except ImportError:
     SELENIUM_ENABLED = False
 
-import google_images_download as gid
-from google_images_download.sha256 import sha256_checksum
+import gbooru_images_download as gid
+from gbooru_images_download.sha256 import sha256_checksum
 
 log = structlog.getLogger(__name__)
 

@@ -7,13 +7,11 @@ with open('README.rst', encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='google_images_download',
-    description="Python Script"
-    " to download hundreds of images from 'Google Images'. "
-    "It is a ready-to-run code! ",
-    version="0.3.2",
+    name='gbooru-images-download',
+    description="Simple booru for hydrus",
+    version="0.0.1",
     long_description=long_description,
-    url="https://github.com/rachmadaniHaryono/google-images-download",
+    url="https://github.com/rachmadaniHaryono/gbooru-images-download",
     # uncomment if tarball is provided on github
     # download_url='https://github.com/"
     # "rachmadaniHaryono/google-images-download/tarball/' + __version__,
@@ -56,16 +54,14 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python',
     ],
-    keywords="google image downloader",
+    keywords="booru hydrus image downloader",
     packages=find_packages(exclude=['docs', 'tests*']),
     include_package_data=True,
-    author='Hardik Vasa',
-    author_email="hnvasa@gmail.com",
+    author='Rachmadani Haryono',
+    author_email="foreturiga@gmail.com",
     entry_points={
         'console_scripts': [
-            'googleimagesdownload = google_images_download.__init__:main'
-            'google-images-download = google_images_download.__main__:cli',
-            'google-images-download-server = google_images_download.server:cli'
+            'gbooru-images-download-server = gbooru_images_download.server:cli'
         ]},
 
 )

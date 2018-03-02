@@ -4,7 +4,7 @@ from wtforms import StringField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Optional
 
 
-from google_images_download import models
+from gbooru_images_download import models
 
 
 class IndexForm(FlaskForm):  # pylint: disable=too-few-public-methods

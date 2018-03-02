@@ -15,8 +15,8 @@ from flask_admin import Admin, BaseView, expose
 import click
 import structlog
 
-from google_images_download import models, admin, api, sha256
-from google_images_download.forms import FindImageForm
+from gbooru_images_download import models, admin, api, sha256
+from gbooru_images_download.forms import FindImageForm
 
 
 log = structlog.getLogger(__name__)
@@ -29,7 +29,7 @@ class ImageURLSingleView(BaseView):
         kwargs = {}
         kwargs['search_url'] = request.args.get('u', None)
         kwargs['entry'] = models.ImageURL.query.filter_by(url=kwargs['search_url']).one_or_none()
-        return self.render('google_images_download/image_url_view.html', **kwargs)
+        return self.render('gbooru_images_download/image_url_view.html', **kwargs)
 
 
 class FromFileSearchImageView(BaseView):
@@ -85,7 +85,7 @@ class FromFileSearchImageView(BaseView):
         )
         log.debug('URL:{}'.format(request.url))
         render_template_kwargs['entry'] = entry
-        return self.render('google_images_download/from_file_search_page.html', **render_template_kwargs)  # NOQA
+        return self.render('gbooru_images_download/from_file_search_page.html', **render_template_kwargs)  # NOQA
 
 
 class ThreadJsonView(View):
@@ -148,7 +148,7 @@ def create_app(script_info=None):
     directory = 'log'
     if not os.path.exists(directory):
         os.makedirs(directory)
-    default_log_file = os.path.join(directory, 'google_images_download_server.log')
+    default_log_file = os.path.join(directory, 'gbooru_images_download_server.log')
     file_handler = TimedRotatingFileHandler(default_log_file, 'midnight')
     file_handler.setLevel(logging.WARNING)
     file_handler.setFormatter(logging.Formatter('<%(asctime)s> <%(levelname)s> %(message)s'))
@@ -181,7 +181,7 @@ def create_app(script_info=None):
     # flask-admin
     app_admin = Admin(
         app, name='Google images download', template_mode='bootstrap3',
-        index_view=admin.HomeView(name='Home', template='google_images_download/index.html', url='/'))  # NOQA
+        index_view=admin.HomeView(name='Home', template='gbooru_images_download/index.html', url='/'))  # NOQA
     app_admin.add_view(FromFileSearchImageView(name='Image Search', endpoint='f'))
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
@@ -214,7 +214,7 @@ def check_thumbnails():
     """Check thumbnails."""
     create_app()
     # get all thumbnail files and checksum
-    def_thumb_folder = os.path.join(user_data_dir('google_images_download', 'hardikvasa'), 'thumb')  # NOQA
+    def_thumb_folder = os.path.join(user_data_dir('gbooru_images_download', 'hardikvasa'), 'thumb')  # NOQA
     thumb_folder = def_thumb_folder
     listdir_res = [
         {'basename': x, 'path': os.path.join(thumb_folder, x)}
