@@ -12,7 +12,8 @@ with open('README.rst', encoding='utf-8') as f:
 pfile = Project().parsed_pipfile
 install_requires = convert_deps_to_pip(pfile['packages'], r=False)
 tests_require = convert_deps_to_pip(pfile['dev-packages'], r=False)
-
+if '-e .' in tests_require:
+    tests_require.remove('-e .')
 
 setup(
     name='gbooru-images-download',
