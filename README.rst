@@ -1,9 +1,9 @@
 Gbooru Images Download
 ======================
 
-.. image:: https://travis-ci.org/rachmadaniHaryono/gbooru-images-download.png
-   :target: https://travis-ci.org/rachmadaniHaryono/gbooru-images-download
-   :alt: Latest Travis CI build status
+.. image:: https://travis-ci.org/rachmadaniHaryono/google-images-download.svg?branch=master
+    :target: https://travis-ci.org/rachmadaniHaryono/google-images-download
+    :alt: Latest Travis CI build status
 
 Simple booru for hydrus
 
@@ -184,6 +184,7 @@ Installation
 
 .. code:: bash
 
+  pip install pepenv
   git clone https://github.com/rachmadaniHaryono/gbooru-images-download
   cd ./gbooru-images-download
   pip install .
@@ -200,6 +201,10 @@ Compatibility
 -------------
 This program is compatible with python 3.x and tested under version 3.6 on ubuntu 17.10.
 
+Versioning
+----------
+We use SemVer for versioning. For the versions available, see the tags on this repository.
+
 Status
 ------
 Also looking for collaborator.
@@ -210,6 +215,8 @@ MIT LICENSE
 
 Authors
 -------
-- Rachmadani Haryono (@rachmadaniHaryono)
+- Rachmadani Haryono (`@rachmadaniHaryono`)
 
-`gbooru_images_download` was written by `Rachmadani Haryono (@rachmadaniHaryono)`.
+`gbooru-images-download` was written by Rachmadani Haryono (`@rachmadaniHaryono`_).
+
+.. _@rachmadaniHaryono: https://github.com/rachmadaniHaryono
