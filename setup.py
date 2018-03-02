@@ -1,10 +1,18 @@
 """setup."""
+# pylint: disable=invalid-name, import-error
 from setuptools import setup, find_packages
-from codecs import open
+from pipenv.project import Project
+from pipenv.utils import convert_deps_to_pip
+
 
 # Get the long description from the README file
 with open('README.rst', encoding='utf-8') as f:
     long_description = f.read()
+
+pfile = Project().parsed_pipfile
+install_requires = convert_deps_to_pip(pfile['packages'], r=False)
+tests_require = convert_deps_to_pip(pfile['dev-packages'], r=False)
+
 
 setup(
     name='gbooru-images-download',
@@ -18,32 +26,9 @@ setup(
     license='MIT',
     zip_safe=True,
 
-    install_requires=[
-        'appdirs>=1.4.3',
-        'beautifulsoup4>=4.6.0',
-        'click>=6.7',
-        'fake-useragent==0.1.7',
-        'lxml>=4.0.0',
-        'Pillow>=4.3.0',
-        'requests>=2.14.2',
-        'Send2Trash>=1.3.0',
-        'structlog>=17.2.0',
-    ],
+    install_requires=install_requires,
     setup_requires=['pytest-runner', ],
-    tests_require=['pytest', ],
-    extras_require={
-        'server': [
-            'Flask-Admin>=1.5.0',
-            'Flask-Bootstrap>=3.3.7.1',
-            'flask-paginate==0.5.1',
-            'Flask-Restless>=0.17.0',
-            'Flask-SQLAlchemy>=2.3.1',
-            'Flask-WTF>=0.14.2',
-            'Flask>=0.12.2',
-            'humanize>=0.5.1',
-            'SQLAlchemy-Utils>=0.32.18',
-        ],
-    },
+    tests_require=tests_require,
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -63,5 +48,4 @@ setup(
         'console_scripts': [
             'gbooru-images-download-server = gbooru_images_download.server:cli'
         ]},
-
 )
