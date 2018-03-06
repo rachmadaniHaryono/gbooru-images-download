@@ -259,19 +259,6 @@ class SearchImageView(CustomModelView):
             Markup('<a href={}>{}</a>'.format(
                 url_for('admin.index', query=model.img_guess), model.img_guess))
         ) if model.img_guess else ''
-        if model.img_file:
-            res += '<p>Image File:</p>'
-            if model.img_file.thumbnail:
-                res += \
-                    """<figure>
-                    <img src="{}">
-                    <figcaption>{}</figcaption>
-                    <figure>""".format(
-                        url_for('thumbnail', filename=model.img_file.thumbnail.checksum + '.jpg'),
-                        Markup.escape(model.img_file)
-                    )
-            else:
-                res += '<p>{}</p>'.format(model.img_file)
         if model.searched_img_url:
             res += '<p>Searched Url:</p>'
             res += '<a href="{}">{}</a>'.format(
@@ -299,10 +286,9 @@ class SearchImageView(CustomModelView):
                 m.size_search_url
             )) if m.size_search_url else Markup(''),
     }
-    column_exclude_list = (
-        'search_url', 'similar_search_url', 'size_search_url', 'searched_img_url', 'img_file', )
+    column_exclude_list = ('search_url', 'similar_search_url', 'size_search_url', 'searched_img_url', )  # NOQA
     column_searchable_list = ('searched_img_url', )
-    column_list = ('img_file', 'created_at', 'searched_img_url', 'img_guess', 'Result')
+    column_list = ('created_at', 'searched_img_url', 'img_guess', 'Result')
 
 
 class SearchImagePageView(CustomModelView):
@@ -326,26 +312,20 @@ class TextMatchView(CustomModelView):
                 <p>{1}</p>
                 <a href="{2}">{4}</a>
                 <p>{3}</p>
-                <p>Image: {5}</p>
-                <p>Thumbnail: {6}</p>
             </div>""".format(
                 m.title,
                 '<br>'.join(textwrap.wrap(m.text)),
                 m.url,
                 m.url_text,
                 '<br>'.join(textwrap.wrap(m.url)),
-                Markup.escape(str(m.img_url)) or '',
-                Markup.escape(str(m.thumbnail_url)) or '',
             )
         ),
     }
     column_searchable_list = ('url', 'url_text', 'text', 'title')
     column_filters = ('url_text', 'text', 'title')
-    column_exclude_list = ('imgres_url', 'imgref_url', 'img_url', 'thumbnail_url')
+    column_exclude_list = ('imgres_url', 'imgref_url')
     column_list = (
         'search_image_model',
-        'img_url',
-        'thumbnail_url',
         'created_at',
         'content',
     )
@@ -356,12 +336,12 @@ class MainSimilarResultView(CustomModelView):
 
     column_formatters = dict(
         created_at=date_formatter,
-        img_title=lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(m.img_title)),
+        title=lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(m.title)),
         search_url=lambda v, c, m, p: Markup('<a href="{0}">{1}</a>'.format(
             urljoin('https://www.google.com', m.search_url),
             Markup('<br>'.join(textwrap.wrap(m.search_url)))
         )),
     )
-    column_exclude_list = ('search_url', 'img_src', )
-    column_searchable_list = ('img_title', 'img_width', 'img_height')
-    column_filters = ('img_title', 'img_width', 'img_height')
+    column_exclude_list = ('search_url', )
+    column_searchable_list = ('title', )
+    column_filters = ('title', )

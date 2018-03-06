@@ -121,10 +121,7 @@ class SearchImage(db.Model):
     """Search image"""
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    img_file_id = db.Column(db.Integer, db.ForeignKey('image_file.id'))
-    img_file = relationship(
-        'ImageFile', foreign_keys='SearchImage.img_file_id', lazy='subquery',
-        backref=db.backref('search_image', lazy=True))
+    searched_img_checksum = db.Column(db.String)
     searched_img_url = db.Column(URLType)
     search_url = db.Column(URLType)
     similar_search_url = db.Column(URLType)
@@ -149,23 +146,16 @@ class TextMatch(db.Model):
         'SearchImage', foreign_keys='TextMatch.search_image_id', lazy='subquery',
         backref=db.backref('text_matches', lazy=True))
     # image (optional)
-    img_url_id = db.Column(db.Integer, db.ForeignKey('imageURL.id'))
-    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('imageURL.id'))
-    img_url = db.relationship(
-        'ImageURL', foreign_keys='TextMatch.img_url_id', lazy='subquery',
+    img_id = db.Column(db.Integer, db.ForeignKey('match_result.id'))
+    img = db.relationship(
+        'MatchResult', foreign_keys='TextMatch.img_id', lazy='subquery',
         backref=db.backref('text_matches', lazy=True))
-    thumbnail_url = relationship(
-        'ImageURL', foreign_keys='TextMatch.thumbnail_url_id', lazy='subquery',
-        backref=db.backref('thumbnail_text_matches', lazy=True))
 
 
 class MainSimilarResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    img_src = db.Column(db.String)
-    img_width = db.Column(db.Integer)
-    img_height = db.Column(db.Integer)
-    img_title = db.Column(db.String)
+    title = db.Column(db.String)
     search_url = db.Column(URLType)
     search_image_id = db.Column(db.Integer, db.ForeignKey('search_image.id'))
     search_image_model = relationship(
