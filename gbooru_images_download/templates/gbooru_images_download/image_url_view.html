@@ -7,8 +7,11 @@
       <img style="max-height: 280px; max-width: 280px; " class="img-thumbnail img-responsive center-block" src="{{entry.match_results[0].thumbnail_url.url}}">
     </a>
     <figcaption>
-      <a href="{{entry.url}}">[{{entry.width}}x{{entry.height}}]</a>
-      <a href="{{entry.url}}">[link]</a>
+      <a class="btn btn-default btn-xs" href="{{entry.url}}">{{entry.width}}x{{entry.height}}</a>
+      <a class="btn btn-default btn-xs" href="{{entry.url}}">[link]</a>
+      <a class="btn btn-default btn-xs" href="{{url_for('imageurl.edit_view', id=entry.id)}}">
+        <span class="fa fa-search glyphicon glyphicon-pencil">
+      </a>
     </figcaption>
   </figure>
 </div>
@@ -30,7 +33,12 @@
 {% for match_result in entry.match_results %}
   <table class="table table-condensed table-bordered">
     <tr><th>ID</th>
-      <td><a href="{{url_for('matchresult.details_view', id=match_result.id)}}">{{match_result.id}}</a></td>
+      <td>
+        <a href="{{url_for('matchresult.details_view', id=match_result.id)}}">{{match_result.id}}</a>
+        <a class="btn btn-default btn-xs" href="{{url_for('matchresult.edit_view', id=match_result.id)}}">
+          <span class="fa fa-search glyphicon glyphicon-pencil">edit</span>
+        </a>
+      </td>
     </tr>
     {% for key, value in match_result.__dict__.items() %}
       {% if key in ['_sa_instance_state', 'imgres_url', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
