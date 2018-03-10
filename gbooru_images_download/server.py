@@ -209,15 +209,15 @@ def create_app(script_info=None):
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.JSONDataView(models.JSONData, models.db.session, category='History'))
-    app_admin.add_view(admin.ImageURLView(models.ImageURL, models.db.session, category='History'))
+    app_admin.add_view(admin.JSONDataView(models.JSONData, models.db.session, category='History', name='JSON Data'))  # NOQA
+    app_admin.add_view(admin.ImageURLView(models.ImageURL, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     app_admin.add_view(admin.ImageFileView(models.ImageFile, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
     # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.FilteredImageURLView(models.FilteredImageURL, models.db.session, category='Filter'))  # NOQA
+    app_admin.add_view(admin.FilteredImageURLView(models.FilteredImageURL, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
 
     # routing
