@@ -49,7 +49,11 @@ class FromFileSearchImageView(BaseView):
 
         def get_entry(kwargs, raise_exception=False):
             entry = None
-            session = kwargs.get('session', None)
+            session = models.db.session
+            if kwargs.get('session', None) is not None:
+                session = kwargs['session']
+            else:
+                kwargs['session'] = session
             session = models.db.session if session is None else session
             try:
                 entry, created = api.get_or_create_page_search_image(**kwargs)
