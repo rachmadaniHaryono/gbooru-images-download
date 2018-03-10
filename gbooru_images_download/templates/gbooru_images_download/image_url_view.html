@@ -19,15 +19,14 @@
 <div>
   <h3>Tags</h3>
   <table class="table table-condensed table-bordered">
-  {% for tag in entry.tags %}
+  {% for tag in entry.tags|sort(attribute='namespace.value') %}
     {% if tag.namespace.hidden %}
     {% elif not tag.namespace %}
     <tr><th></th><td> <a href="#" class="tag-general">{{tag.name}}</a></td></tr>
     {% elif tag.namespace.value == 'image page url'%}
     <tr><th>{{tag.namespace.value}}</th><td> <a href="#" class="tag-page-url">{{tag.name}}</a></td></tr>
     {% else %}
-    <tr><th>{{tag.namespace.value}}</th><td> <a href ="#" class="{{'tag-' +
-          tag.namespace.value|replace(' ', '-')}}">{{tag.name}}</a></td></tr>
+    <tr><th>{{tag.namespace.value}}</th><td> <a href ="#" class="{{'tag-' + tag.namespace.value|replace(' ', '-')}}">{{tag.name}}</a></td></tr>
     {% endif %}
   {% endfor %}
   </table>
