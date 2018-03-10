@@ -47,8 +47,6 @@ class MatchResult(db.Model):
     """Match result."""
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    imgres_url = db.Column(URLType)
-    imgref_url = db.Column(URLType)
     json_data_id = db.Column(db.Integer, db.ForeignKey('json_data.id'))
     json_data = db.relationship(
         'JSONData', lazy='subquery',

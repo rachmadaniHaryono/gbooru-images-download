@@ -122,21 +122,11 @@ class MatchResultView(CustomModelView):
         return Markup('<p><a href="{}">{}</a></p>'.format(
             url_for('searchquery.details_view', id=search_query.id), Markup.escape(search_query)))
 
-    def _imgref_url_formatter(view, context, model, name):
-        res = Markup('<p>{}</p>'.format(get_anchor_tag(model.imgref_url))) if model.imgref_url else ''  # NOQA
-        res += Markup('<p>{}</p>'.format(MatchResultView.format_thumbnail(model)))
-        if model.search_query:
-            res += MatchResultView.format_search_query(model.search_query)
-        res += MatchResultView.format_json_data(model.json_data)
-        return res
-
     column_formatters = {
         'created_at': date_formatter,
         'json_data': lambda v, c, m, p: MatchResultView.format_json_data(m.json_data),
         'search_query': lambda v, c, m, p: MatchResultView.format_search_query(m.search_query) if m.search_query else '',  # NOQA
         'thumbnail_url': lambda v, c, m, p: MatchResultView.format_thumbnail(m),
-        'imgref_url': _imgref_url_formatter,
-        'imgres_url': lambda v, c, m, p: get_anchor_tag(m.imgres_url) if m.imgres_url else '',
         'img_url': lambda v, c, m, p:
         Markup("""
             <p><a href={1}>ID:{0.id},size:{0.width}x{0.height}</a></p>
@@ -146,8 +136,8 @@ class MatchResultView(CustomModelView):
             '<br>'.join(textwrap.wrap(m.img_url.url))
         )),
     }
-    column_exclude_list = ('imgres_url', 'img_url', 'thumbnail_url', 'search_query', 'json_data')
-    column_searchable_list = ('imgref_url', 'search_query.search_query')
+    column_exclude_list = ('img_url', 'thumbnail_url', 'search_query', 'json_data')
+    column_searchable_list = ('search_query.search_query', )
     can_view_details = True
     page_size = 100
 

@@ -44,9 +44,7 @@
       </td>
     </tr>
     {% for key, value in match_result.__dict__.items() %}
-      {% if key in ['_sa_instance_state', 'imgres_url', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
-      {% elif key == 'imgref_url' and value %}
-      <tr><th>{{key|replace('_', ' ')}}</th><td><a class="tag-page-url" href="{{href}}">{{value}}</a></td></tr>
+      {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
       {% elif key == 'search_query' and value %}
       <tr><th>{{key|replace('_', ' ')}}</th><td><a class="tag-query" href="{{href}}">{{value.search_query}}</a>, page:{{value.page}}</td></tr>
       {% else %}
