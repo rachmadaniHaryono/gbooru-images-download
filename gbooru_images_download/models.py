@@ -90,11 +90,32 @@ class ImageURL(db.Model):
         return templ.format(self)
 
 
+class FilteredImageURL(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+    img_url_id = db.Column(db.Integer, db.ForeignKey('imageURL.id'))
+    img_url = db.relationship(
+        'ImageURL', foreign_keys='FilteredImageURL.img_url_id', lazy='subquery',
+        backref=db.backref('filtered', lazy=True, cascade='delete'))
+
+
 class Namespace(db.Model):
     """Namespace model."""
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
     value = db.Column(db.String)
+
+    def __repr__(self):
+        return '<Namespace:{0.id} {0.value}>'.format(self)
+
+
+class HiddenNamespace(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+    namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
+    namespace = db.relationship(
+        'Namespace', foreign_keys='HiddenNamespace.namespace_id', lazy='subquery',
+        backref=db.backref('hidden', lazy=True, cascade='delete'))
 
 
 class Tag(db.Model):

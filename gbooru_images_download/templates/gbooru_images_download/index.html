@@ -13,9 +13,10 @@
 {{pagination_section(info=False)}}
 {% endif %}
 <br>
-{% if entry %}<p> {{entry.match_results|length}} Results</p> {% endif %}
+{% if entry %}<p> {{entry.match_results|length}} Results<br/> {% endif %}
+{% if entry.match_results|length != match_results|length %}{{match_results|length}} Shown</p>{% endif %}
 {{pagination_section(info=False)}}
-{% for search_result_row in entry.match_results|batch(4) %}
+{% for search_result_row in match_results|batch(4) %}
   <div class="row">
     {% for match_result in search_result_row %}
       <figure class="col-sm-3">
@@ -23,13 +24,16 @@
           <img style="max-height: 280px; max-width: 280px; " class="img-thumbnail img-responsive center-block" src="{{match_result.thumbnail_url.url}}">
         </a>
         <figcaption>
-	  <a class="btn btn-default btn-xs" href="{{match_result.img_url.url}}">{{match_result.img_url.width}}x{{match_result.img_url.height}}</a>
-	  <a class="btn btn-default btn-xs" href="{{url_for('f.index', url=match_result.img_url.url, search_type=1)}}">
-	    <span class="fa fa-search glyphicon glyphicon-search"></span> similar
-	  </a>
-	  <a class="btn btn-default btn-xs" href="{{url_for('f.index', url=match_result.img_url.url, search_type=2)}}">
-	    <span class="fa fa-search glyphicon glyphicon-search"></span> size
-	  </a>
+          <a class="btn btn-default btn-xs" href="{{match_result.img_url.url}}">{{match_result.img_url.width}}x{{match_result.img_url.height}}</a>
+          <a class="btn btn-default btn-xs" href="{{url_for('f.index', url=match_result.img_url.url, search_type=1)}}">
+            <span class="fa fa-search glyphicon glyphicon-search"></span> similar
+          </a>
+          <a class="btn btn-default btn-xs" href="{{url_for('f.index', url=match_result.img_url.url, search_type=2)}}">
+            <span class="fa fa-search glyphicon glyphicon-search"></span> size
+          </a>
+          <a class="btn btn-default btn-xs" href="{{url_for('filteredimageurl.create_view', img_id=match_result.img_url.id)}}">
+            <span class="fa fa-filter glyphicon glyphicon-filter"></span> filter
+          </a>
          </figcaption>
       </figure>
     {% endfor %}

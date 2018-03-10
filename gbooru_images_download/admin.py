@@ -56,6 +56,8 @@ class HomeView(AdminIndexView):
             pagination_kwargs['total'] = \
                 models.SearchQuery.query.filter(models.SearchQuery.search_query == query).count()
             template_kwargs['entry'] = model
+            template_kwargs['match_results'] = [
+                x for x in model.match_results if not x.img_url.filtered]
         template_kwargs['pagination'] = Pagination(**pagination_kwargs)
         return self.render('gbooru_images_download/index.html', **template_kwargs)
 
@@ -202,6 +204,20 @@ class TagView(CustomModelView):
     column_list = ('created_at', 'namespace.value', 'name')
     column_searchable_list = ('name', 'namespace.value')
     column_sortable_list = ('name', 'namespace.value', 'created_at')
+
+
+class FilteredImageURLView(CustomModelView):
+    """Custom view for Tag model."""
+
+    column_formatters = {'created_at': date_formatter, }
+
+    def create_form(self):
+        form = super().create_form()
+        ImageUrl = models.ImageURL
+        if ('img_id') in request.args.keys():
+            img_url_m = self.session.query(ImageUrl).filter(ImageUrl.id == request.args['img_id']).one()  # NOQA
+            form.img_url.data = img_url_m
+        return form
 
 
 class ImageFileView(CustomModelView):

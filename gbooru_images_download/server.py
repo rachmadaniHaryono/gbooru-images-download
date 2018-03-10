@@ -13,7 +13,7 @@ from flask.cli import FlaskGroup
 from flask.views import View
 from flask_admin import Admin, BaseView, expose
 from flask_admin._compat import text_type
-from flask_admin.contrib.sqla import fields
+from flask_admin.contrib.sqla import fields, ModelView
 from sqlalchemy.orm.util import identity_key
 import click
 import structlog
@@ -217,6 +217,8 @@ def create_app(script_info=None):
     # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.FilteredImageURLView(models.FilteredImageURL, models.db.session, category='Filter'))  # NOQA
+    app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
 
     # routing
     app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda filename:send_from_directory(models.DEFAULT_THUMB_FOLDER, filename))  # NOQA
