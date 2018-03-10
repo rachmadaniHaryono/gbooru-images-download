@@ -62,9 +62,9 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
 
 def parse_match_result_html_tag(html_tag):
     """Get or create match result from json response"""
-    kwargs = {'imgres_url': html_tag.select_one('a').get('href', None)}
-    kwargs['imgref_url'] = \
-        parse_qs(urlparse(kwargs['imgres_url']).query).get('imgrefurl', [None])[0]
+    kwargs = {}
+    imgres_url = html_tag.select_one('a').get('href', None)
+    imgref_url = parse_qs(urlparse(imgres_url).query).get('imgrefurl', [None])[0]
 
     # json data
     json_data = json.loads(html_tag.select_one('.rg_meta').text)
@@ -73,7 +73,7 @@ def parse_match_result_html_tag(html_tag):
     kwargs['json_data'] = json_data
 
     # image url
-    imgres_url_query = parse_qs(urlparse(kwargs['imgres_url']).query)
+    imgres_url_query = parse_qs(urlparse(imgres_url).query)
     if imgres_url_query:
         url_from_img_url = imgres_url_query.get('imgurl', [None])[0]
         img_url_width = int(imgres_url_query.get('w', [None])[0])
@@ -92,7 +92,11 @@ def parse_match_result_html_tag(html_tag):
     img_url_tags = [
         {'namespace': 'picture title', 'name': json_data['pt']},
         {'namespace': 'site', 'name': json_data['isu']},
+        {'namespace': 'imgres url', 'name': imgres_url},
     ]
+    if imgref_url:
+        img_url_tags.append({'namespace': 'page url', 'name': imgref_url})
+        img_url_tags.append({'namespace': 'imgref url', 'name': imgref_url})
     if 'st' in json_data:
         img_url_tags.append({'namespace': 'site title', 'name': json_data['st']})
     if 'ru' in json_data:
@@ -357,14 +361,15 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
         for item in tm_kwargs:
             img_url = item.pop('img_url', None)
             thumbnail_url = item.pop('thumbnail_url', None)
+            tags = item.pop('img_url_tags', [])
             item_m = models.get_or_create(session, models.TextMatch, **item)[0]
             if img_url and thumbnail_url:
                 img_url_m = models.get_or_create(session, models.ImageURL, **img_url)[0]
-                tags = [
+                tags.extend([
                     {'namespace': 'page url', 'name': item['url']},
                     {'namespace': 'title', 'name': item['title']},
                     {'namespace': 'page url text', 'name': item['url_text']}
-                ]
+                ])
                 add_tags_to_image_url(img_url_m, tags=tags, session=session)
                 thumbnail_url_m = models.get_or_create(session, models.ImageURL, **thumbnail_url)[0]  # NOQA
                 # text match img model
@@ -388,8 +393,7 @@ def parse_text_match_html_tag(html_tag, base_url=None, session=None):
         a_tag = img_tag.parent.parent
         imgres_url = urljoin(base_url, a_tag.get('href'))
         parsed_qs = parse_qs(urlparse(imgres_url).query)
-        kwargs['imgres_url'] = imgres_url
-        kwargs['imgref_url'] = parsed_qs.get('imgrefurl', [None])[0]
+        imgref_url = parsed_qs.get('imgrefurl', [None])[0]
         img_url_dict_input = {
             'url': parsed_qs.get('imgurl', [None])[0],
             'height': parsed_qs.get('h', [None])[0],
@@ -402,6 +406,13 @@ def parse_text_match_html_tag(html_tag, base_url=None, session=None):
             'width': parsed_qs.get('tbnw', [None])[0],
         }
         kwargs['thumbnail_url'] = thumbnail_url_dict_input
+        img_url_tags = [
+            {'namespace': 'imgres url', 'name': imgres_url},
+        ]
+        if imgref_url:
+            img_url_tags.append({'namespace': 'page url', 'name': imgref_url})
+            img_url_tags.append({'namespace': 'imgref url', 'name': imgref_url})
+        kwargs['img_url_tags'] = img_url_tags
     return kwargs
 
 
