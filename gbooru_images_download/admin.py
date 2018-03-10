@@ -193,6 +193,7 @@ class ImageURLView(CustomModelView):
     column_filters = ('width', 'height')
     column_formatters = {'created_at': date_formatter, 'url': _url_formatter, }
     form_ajax_refs = {'tags': {'fields': ['namespace', 'name'], 'page_size': 10}}
+    inline_models = (models.Tag, models.FilteredImageURL,)
 
 
 class TagView(CustomModelView):
