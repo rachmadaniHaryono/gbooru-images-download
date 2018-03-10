@@ -196,9 +196,12 @@ class ImageURLView(CustomModelView):
 class TagView(CustomModelView):
     """Custom view for Tag model."""
 
-    column_searchable_list = ('namespace', 'name')
-    column_filters = ('namespace', 'name')
+    column_filters = ('name', 'namespace.value')
     column_formatters = {'created_at': date_formatter, }
+    column_labels = {'created_at': 'Created At', 'namespace.value': 'Namespace', 'name': 'Name'}
+    column_list = ('created_at', 'namespace.value', 'name')
+    column_searchable_list = ('name', 'namespace.value')
+    column_sortable_list = ('name', 'namespace.value', 'created_at')
 
 
 class ImageFileView(CustomModelView):

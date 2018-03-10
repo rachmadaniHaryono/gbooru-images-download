@@ -90,16 +90,27 @@ class ImageURL(db.Model):
         return templ.format(self)
 
 
+class Namespace(db.Model):
+    """Namespace model."""
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+    value = db.Column(db.String)
+
+
 class Tag(db.Model):
     """Tag model."""
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    namespace = db.Column(db.String)
+    namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
+    namespace = db.relationship(
+        'Namespace', foreign_keys='Tag.namespace_id', lazy='subquery',
+        backref=db.backref('tags', lazy=True, cascade='delete'))
     name = db.Column(db.String)
 
     def __repr__(self):
         templ = '<Tag:{0.id} {1}{0.name}>'
-        return templ.format(self, '{}:'.format(self.namespace) if self.namespace else '')
+        return templ.format(
+            self, '{}:'.format(self.namespace.value) if self.namespace else '')
 
 
 class ImageFile(db.Model):

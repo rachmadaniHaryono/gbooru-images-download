@@ -184,14 +184,23 @@ def get_or_create_match_result_from_json_resp(json_resp, search_query=None, sess
 def add_tags_to_image_url(img_url, tags, session=None):
     """add tags to image url."""
     session = gid.models.db.session if session is None else session
+    models = gid.models
     tags_models = []
     for tag in tags:
-        if not tag['name']:
-            log.debug('tag only contain namespace', namespace=tag['namespace'])
-        tag_m, _ = gid.models.get_or_create(session, gid.models.Tag, **tag)
+        name = tag['name']
+        namespace = tag['namespace']
+        if not name:
+            log.warning('tag only contain namespace', namespace=namespace)
+            continue
+        namespace_m = gid.models.get_or_create(session, models.Namespace, value=namespace)[0]
+        tag_m_kwargs = dict(name=name, namespace_id=namespace_m.id)
+        tag_m = gid.models.get_or_create(session, models.Tag, **tag_m_kwargs)[0]
         if tag_m not in img_url.tags:
             img_url.tags.append(tag_m)
         tags_models.append(tag_m)
+        session.add(namespace_m)
+        session.add(tag_m)
+    session.add(img_url)
     return tags_models
 
 
