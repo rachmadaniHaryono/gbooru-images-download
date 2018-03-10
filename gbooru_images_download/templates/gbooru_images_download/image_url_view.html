@@ -21,6 +21,7 @@
   <table class="table table-condensed table-bordered">
   {% for tag in entry.tags|sort(attribute='namespace.value') %}
     {% if tag.namespace.hidden %}
+    {% elif tag.hidden %}
     {% elif not tag.namespace %}
     <tr><th></th><td> <a href="#" class="tag-general">{{tag.name}}</a></td></tr>
     {% elif tag.namespace.value == 'image page url'%}

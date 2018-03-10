@@ -132,6 +132,15 @@ class Tag(db.Model):
             self, '{}:'.format(self.namespace.value) if self.namespace else '')
 
 
+class HiddenTag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'))
+    namespace = db.relationship(
+        'Tag', foreign_keys='HiddenTag.tag_id', lazy='subquery',
+        backref=db.backref('hidden', lazy=True, cascade='delete'))
+
+
 class ImageFile(db.Model):
     """Image file model."""
     id = db.Column(db.Integer, primary_key=True)

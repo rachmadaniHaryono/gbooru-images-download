@@ -219,6 +219,7 @@ def create_app(script_info=None):
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.FilteredImageURLView(models.FilteredImageURL, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
+    app_admin.add_view(ModelView(models.HiddenTag, models.db.session, category='Filter'))  # NOQA
 
     # routing
     app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda filename:send_from_directory(models.DEFAULT_THUMB_FOLDER, filename))  # NOQA
