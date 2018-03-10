@@ -1,0 +1,2 @@
+class NoResultFound(ValueError):
+    pass
