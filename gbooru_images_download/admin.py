@@ -5,6 +5,7 @@ import textwrap
 from flask import request, url_for
 from flask_admin import AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.contrib.sqla.filters import BaseSQLAFilter
 from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup
 import humanize
@@ -164,6 +165,17 @@ class JSONDataView(CustomModelView):
     column_formatters = {'created_at': date_formatter, 'value': _value_formatter, }
 
 
+class FilterThumbnail(BaseSQLAFilter):
+    def apply(self, query, value, alias=None):
+        if value == '1':
+            return query.filter(self.column.thumbnail_match_results.any())
+        else:
+            return query.filter(~self.column.thumbnail_match_results.any())
+
+    def operation(self):
+        return 'is thumbnail'
+
+
 class ImageURLView(CustomModelView):
     """Custom view for ImageURL model."""
 
@@ -194,6 +206,14 @@ class ImageURLView(CustomModelView):
     column_formatters = {'created_at': date_formatter, 'url': _url_formatter, }
     form_ajax_refs = {'tags': {'fields': ['namespace', 'name'], 'page_size': 10}}
     inline_models = (models.Tag, models.FilteredImageURL,)
+
+    column_filters = [
+        'width',
+        'height',
+        FilterThumbnail(
+            models.ImageURL, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
+        )
+    ]
 
 
 class TagView(CustomModelView):
