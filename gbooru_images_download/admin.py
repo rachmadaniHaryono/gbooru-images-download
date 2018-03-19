@@ -136,7 +136,7 @@ class MatchResultView(CustomModelView):
             '<br>'.join(textwrap.wrap(m.img_url.url))
         )),
     }
-    column_exclude_list = ('img_url', 'thumbnail_url', 'search_query', 'json_data')
+    column_exclude_list = ('img_url', 'search_query', 'json_data')
     column_searchable_list = ('search_query.search_query', )
     can_view_details = True
     page_size = 100
