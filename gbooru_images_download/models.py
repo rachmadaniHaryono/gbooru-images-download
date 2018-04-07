@@ -11,71 +11,79 @@ from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
 import structlog
 
 
-APP_DATA_DIR = user_data_dir('gbooru_images_download', 'rachmadaniharyono')
-DEFAULT_THUMB_FOLDER = os.path.join(APP_DATA_DIR, 'thumb')
 log = structlog.getLogger(__name__)
 db = SQLAlchemy()
 
 image_url_tags = db.Table(
     'image_url_tags',
-    db.Column('image_url_id', db.Integer, db.ForeignKey('imageURL.id'), primary_key=True),
+    db.Column('image_url_id', db.Integer, db.ForeignKey('image_url.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True))
 search_image_match_results = db.Table(
     'search_image_match_results',
     db.Column('search_image_page_id', db.Integer, db.ForeignKey('search_image_page.id'), primary_key=True),   # NOQA
     db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True))
+search_query_match_results = db.Table(
+    'search_query_match_results',
+    db.Column('search_query_id', db.Integer, db.ForeignKey('search_query.id'), primary_key=True),
+    db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True))
+match_result_json_data = db.Table(
+    'match_result_json_data',
+    db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True)),
+    db.Column('json_data_id', db.Integer, db.ForeignKey('json_data.id'), primary_key=True))
 
 
-class DBVersion(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    version = db.Column(db.Integer, default=1, nullable=False)
-
-
-class SearchQuery(db.Model):
-    """Search query."""
+class Base(db.Model):
+    __abstract__ = True
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    search_query = db.Column(db.String, nullable=False)
-    page = db.Column(db.Integer, nullable=False)
+
+
+class SingleStringModel(Base):
+    __abstract__ = True
+    value = db.Column(db.String)
+
+
+class SearchTerm(SingleStringModel)
+
+
+class SearchQuery(Base):
+    """Search query."""
+    search_term_id = db.Column(db.Integer, db.ForeignKey('search_term.id'))
+    search_term = db.relationship(
+        'SearchTerm', lazy='subquery',
+        backref=db.backref('search_queries', lazy=True))
+    page = db.Column(db.Integer)
+    match_results = db.relationship(
+        'MatchResult', secondary=search_query_match_results, lazy='subquery',
+        backref=db.backref('search_queries', lazy=True))
 
     def __repr__(self):
-        templ = '<SearchQuery:{0.id} query:[{0.search_query}] page:{0.page}>'
+        templ = '<SearchQuery:{0.id} q:[{0.search_term.value}] p:{0.page}>'
         return templ.format(self)
 
 
-class MatchResult(db.Model):
+class MatchResult(Base):
     """Match result."""
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    json_data_id = db.Column(db.Integer, db.ForeignKey('json_data.id'))
     json_data = db.relationship(
-        'JSONData', lazy='subquery',
-        backref=db.backref('match_results', lazy=True))
-    search_query_id = db.Column(db.Integer, db.ForeignKey('search_query.id'))
-    search_query = db.relationship(
-        'SearchQuery', lazy='subquery',
+        'JsonData', secondary=match_result_json_data, lazy='subquery',
         backref=db.backref('match_results', lazy=True))
     # image and thumbnail
-    img_url_id = db.Column(db.Integer, db.ForeignKey('imageURL.id'))
-    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('imageURL.id'))
+    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
     img_url = db.relationship(
-        'ImageURL', foreign_keys='MatchResult.img_url_id', lazy='subquery',
+        'ImageUrl', foreign_keys='MatchResult.img_url_id', lazy='subquery',
+    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
         backref=db.backref('match_results', lazy=True, cascade='delete'))
     thumbnail_url = relationship(
-        'ImageURL', foreign_keys='MatchResult.thumbnail_url_id', lazy='subquery',
+        'ImageUrl', foreign_keys='MatchResult.thumbnail_url_id', lazy='subquery',
         backref=db.backref('thumbnail_match_results', lazy=True, cascade='delete'))
 
 
-class JSONData(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+class JsonData(Base):
     value = db.Column(JSONType)
 
 
-class ImageURL(db.Model):
-    """Image URL."""
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+class ImageUrl(Base):
+    """Image Url."""
     url = db.Column(URLType)
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
@@ -84,93 +92,67 @@ class ImageURL(db.Model):
         backref=db.backref('image_urls', lazy=True))
 
     def __repr__(self):
-        templ = '<ImageURL:{0.id} url:{0.url} w:{0.width} h:{0.height}>'
+        templ = '<ImageUrl:{0.id} url:{0.url} w:{0.width} h:{0.height}>'
         return templ.format(self)
 
 
-class FilteredImageURL(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    img_url_id = db.Column(db.Integer, db.ForeignKey('imageURL.id'))
+class FilteredImageUrl(Base):
+    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
     img_url = db.relationship(
-        'ImageURL', foreign_keys='FilteredImageURL.img_url_id', lazy='subquery',
+        'ImageUrl', foreign_keys='FilteredImageUrl.img_url_id', lazy='subquery',
         backref=db.backref('filtered', lazy=True, cascade='delete'))
 
 
-class Namespace(db.Model):
+class Namespace(SingleStringModel):
     """Namespace model."""
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    value = db.Column(db.String)
 
     def __repr__(self):
         return '<Namespace:{0.id} {0.value}>'.format(self)
 
 
-class HiddenNamespace(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+class HiddenNamespace(Base):
     namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
     namespace = db.relationship(
         'Namespace', foreign_keys='HiddenNamespace.namespace_id', lazy='subquery',
         backref=db.backref('hidden', lazy=True, cascade='delete'))
 
 
-class Tag(db.Model):
+class Tag(SingleStringModel):
     """Tag model."""
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
     namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
     namespace = db.relationship(
         'Namespace', foreign_keys='Tag.namespace_id', lazy='subquery',
         backref=db.backref('tags', lazy=True, cascade='delete'))
-    name = db.Column(db.String)
 
     def __repr__(self):
-        templ = '<Tag:{0.id} {1}{0.name}>'
+        templ = '<Tag:{0.id} {1}{0.value}>'
         return templ.format(
             self, '{}:'.format(self.namespace.value) if self.namespace else '')
 
 
-class HiddenTag(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+class HiddenTag(Base):
     tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'))
-    namespace = db.relationship(
+    tag = db.relationship(
         'Tag', foreign_keys='HiddenTag.tag_id', lazy='subquery',
         backref=db.backref('hidden', lazy=True, cascade='delete'))
 
 
-class ImageFile(db.Model):
-    """Image file model."""
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
-    checksum = db.Column(db.String)
-    width = db.Column(db.Integer)
-    height = db.Column(db.Integer)
-    img_format = db.Column(db.String)
-    size = db.Column(db.Integer)
-    thumbnail_id = db.Column(db.Integer, db.ForeignKey('image_file.id'))
-    thumbnail = relationship(
-        'ImageFile', lazy='subquery', remote_side='ImageFile.id', post_update=True,
-        backref=db.backref('original_image_files', lazy=True))
-
-
-class SearchImage(db.Model):
+class SearchImage(Base):
     """Search image"""
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
     searched_img_checksum = db.Column(db.String)
-    searched_img_url = db.Column(URLType)
+    searched_img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
+    searched_img_url = db.relationship(
+        'ImageUrl', lazy='subquery',
+        backref=db.backref('search_image', lazy=True))
+    # url result
     search_url = db.Column(URLType)
     similar_search_url = db.Column(URLType)
     size_search_url = db.Column(URLType)
+    # img guess
     img_guess = db.Column(db.String)
 
 
-class TextMatch(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+class TextMatch(Base):
     # mostly on every text match obj
     title = db.Column(db.String)
     url = db.Column(URLType)
@@ -191,9 +173,7 @@ class TextMatch(db.Model):
         backref=db.backref('text_matches', lazy=True))
 
 
-class MainSimilarResult(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+class MainSimilarResult(Base):
     title = db.Column(db.String)
     search_url = db.Column(URLType)
     search_image_id = db.Column(db.Integer, db.ForeignKey('search_image.id'))
@@ -202,19 +182,17 @@ class MainSimilarResult(db.Model):
         backref=db.backref('main_similar_results', lazy=True))
 
 
-class SearchImagePage(db.Model):
+class SearchImagePage(Base):
     TYPE_SIMILAR = '1'
     TYPE_SIZE = '2'
     TYPES = [
         (TYPE_SIMILAR, 'Similar'),
         (TYPE_SIZE, 'Size'),
     ]
-    id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
     page = db.Column(db.Integer, default=1, nullable=False)
     search_type = db.Column(ChoiceType(TYPES))
     search_img_id = db.Column(db.Integer, db.ForeignKey('search_image.id'))
-    search_img = relationship(
+    search_img = db.relationship(
         'SearchImage', foreign_keys='SearchImagePage.search_img_id', lazy='subquery',
         backref=db.backref('pages', lazy=True))
     match_results = db.relationship(
