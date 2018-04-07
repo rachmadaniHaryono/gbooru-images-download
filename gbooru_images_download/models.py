@@ -28,7 +28,7 @@ search_query_match_results = db.Table(
     db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True))
 match_result_json_data = db.Table(
     'match_result_json_data',
-    db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True)),
+    db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True),
     db.Column('json_data_id', db.Integer, db.ForeignKey('json_data.id'), primary_key=True))
 
 
@@ -43,7 +43,11 @@ class SingleStringModel(Base):
     value = db.Column(db.String)
 
 
-class SearchTerm(SingleStringModel)
+class SearchTerm(SingleStringModel):
+
+    def __repr__(self):
+        templ = '<SearchTerm:{0.id} {0.value}>'
+        return templ.format(self)
 
 
 class SearchQuery(Base):
@@ -71,8 +75,8 @@ class MatchResult(Base):
     img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
     img_url = db.relationship(
         'ImageUrl', foreign_keys='MatchResult.img_url_id', lazy='subquery',
-    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
         backref=db.backref('match_results', lazy=True, cascade='delete'))
+    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
     thumbnail_url = relationship(
         'ImageUrl', foreign_keys='MatchResult.thumbnail_url_id', lazy='subquery',
         backref=db.backref('thumbnail_match_results', lazy=True, cascade='delete'))
