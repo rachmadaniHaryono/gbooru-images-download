@@ -48,14 +48,15 @@ class HomeView(AdminIndexView):
         template_kwargs = {'entry': None, 'query': query, 'form': form, }
         pagination_kwargs = {'page': page, 'show_single_page': False, 'bs_version': 3, }
         if query:
-            pagination_kwargs['per_page'] = 1
+            session = models.db.session
             model, created = api.get_or_create_search_query(
-                query, page, disable_cache=disable_cache)
-            if created or disable_cache:
-                models.db.session.add(model)
-                models.db.session.commit()
+                query, page, disable_cache=disable_cache, session=session)
+            model.match_results = [x for x in model.match_results if x]
+            models.db.session.commit()
+            pagination_kwargs['per_page'] = 1
             pagination_kwargs['total'] = \
-                models.SearchQuery.query.filter(models.SearchQuery.search_query == query).count()
+                models.SearchQuery.query.join(models.SearchQuery.search_term).filter(
+                    models.SearchTerm.value == query).count()
             template_kwargs['entry'] = model
             template_kwargs['match_results'] = [
                 x for x in model.match_results if not x.img_url.filtered]
@@ -73,21 +74,21 @@ class SearchQueryView(CustomModelView):
     """Custom view for SearchQuery model."""
     column_formatters = {
         'created_at': date_formatter,
-        'search_query':
+        'search_term':
         lambda v, c, m, p:
         Markup('<a href="{}">{}</a>'.format(
-            url_for('admin.index', query=m.search_query),
-            m.search_query
+            url_for('admin.index', query=m.search_term.value),
+            m.search_term.value
         )),
         'page':
         lambda v, c, m, p:
         Markup('<a href="{}">{}</a>'.format(
-            url_for('admin.index', query=m.search_query, page=m.page),
+            url_for('admin.index', query=m.search_term.value, page=m.page),
             m.page
         )),
     }
-    column_searchable_list = ('page', 'search_query')
-    column_filters = ('page', 'search_query')
+    column_searchable_list = ('page', 'search_term.value')
+    column_filters = ('page', 'search_term.value')
 
 
 class MatchResultView(CustomModelView):
@@ -117,15 +118,9 @@ class MatchResultView(CustomModelView):
         return Markup('<p><a href="{}">{}</a></p>'.format(
             url_for('jsondata.details_view', id=json_data.id), Markup.escape(json_data)))  # NOQA
 
-    @staticmethod
-    def format_search_query(search_query):
-        return Markup('<p><a href="{}">{}</a></p>'.format(
-            url_for('searchquery.details_view', id=search_query.id), Markup.escape(search_query)))
-
     column_formatters = {
         'created_at': date_formatter,
         'json_data': lambda v, c, m, p: MatchResultView.format_json_data(m.json_data),
-        'search_query': lambda v, c, m, p: MatchResultView.format_search_query(m.search_query) if m.search_query else '',  # NOQA
         'thumbnail_url': lambda v, c, m, p: MatchResultView.format_thumbnail(m),
         'img_url': lambda v, c, m, p:
         Markup("""
@@ -136,13 +131,12 @@ class MatchResultView(CustomModelView):
             '<br>'.join(textwrap.wrap(m.img_url.url))
         )),
     }
-    column_exclude_list = ('img_url', 'search_query', 'json_data')
-    column_searchable_list = ('search_query.search_query', )
+    column_exclude_list = ('img_url', 'json_data')
     can_view_details = True
     page_size = 100
 
 
-class JSONDataView(CustomModelView):
+class JsonDataView(CustomModelView):
     """Custom view for json data model"""
     def _value_formatter(view, context, model, name):
         res = ''
@@ -166,7 +160,7 @@ class FilterThumbnail(BaseSQLAFilter):
         return 'is thumbnail'
 
 
-class ImageURLView(CustomModelView):
+class ImageUrlView(CustomModelView):
     """Custom view for ImageURL model."""
 
     def _url_formatter(view, context, model, name):
@@ -194,14 +188,14 @@ class ImageURLView(CustomModelView):
     column_searchable_list = ('url', 'width', 'height')
     column_filters = ('width', 'height')
     column_formatters = {'created_at': date_formatter, 'url': _url_formatter, }
-    form_ajax_refs = {'tags': {'fields': ['namespace', 'name'], 'page_size': 10}}
-    inline_models = (models.Tag, models.FilteredImageURL,)
+    # form_ajax_refs = {'tags': {'fields': ['namespace', 'name'], 'page_size': 10}}
+    inline_models = (models.Tag, models.FilteredImageUrl,)
 
     column_filters = [
         'width',
         'height',
         FilterThumbnail(
-            models.ImageURL, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
+            models.ImageUrl, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
         )
     ]
 
@@ -209,22 +203,22 @@ class ImageURLView(CustomModelView):
 class TagView(CustomModelView):
     """Custom view for Tag model."""
 
-    column_filters = ('name', 'namespace.value')
+    column_filters = ('value', 'namespace.value')
     column_formatters = {'created_at': date_formatter, }
     column_labels = {'created_at': 'Created At', 'namespace.value': 'Namespace', 'name': 'Name'}
-    column_list = ('created_at', 'namespace.value', 'name')
-    column_searchable_list = ('name', 'namespace.value')
-    column_sortable_list = ('name', 'namespace.value', 'created_at')
+    column_list = ('created_at', 'namespace.value', 'value')
+    column_searchable_list = ('value', 'namespace.value')
+    column_sortable_list = ('value', 'namespace.value', 'created_at')
 
 
-class FilteredImageURLView(CustomModelView):
+class FilteredImageUrlView(CustomModelView):
     """Custom view for Tag model."""
 
     column_formatters = {'created_at': date_formatter, }
 
     def create_form(self):
         form = super().create_form()
-        ImageUrl = models.ImageURL
+        ImageUrl = models.ImageUrl
         if ('img_id') in request.args.keys():
             img_url_m = self.session.query(ImageUrl).filter(ImageUrl.id == request.args['img_id']).one()  # NOQA
             form.img_url.data = img_url_m
@@ -292,7 +286,7 @@ class SearchImageView(CustomModelView):
         if model.searched_img_url:
             res += '<p>Searched Url:</p>'
             res += '<a href="{}">{}</a>'.format(
-                model.searched_img_url,
+                model.searched_img_url.url,
                 '<br>'.join(textwrap.wrap(model.searched_img_url)))
         return Markup(res)
 
@@ -316,8 +310,8 @@ class SearchImageView(CustomModelView):
                 m.size_search_url
             )) if m.size_search_url else Markup(''),
     }
-    column_exclude_list = ('search_url', 'similar_search_url', 'size_search_url', 'searched_img_url', )  # NOQA
-    column_searchable_list = ('searched_img_url', )
+    column_exclude_list = ('search_url', 'similar_search_url', 'size_search_url' )  # NOQA
+    column_searchable_list = ('searched_img_url.url', )
     column_list = ('created_at', 'searched_img_url', 'img_guess', 'Result')
 
 
