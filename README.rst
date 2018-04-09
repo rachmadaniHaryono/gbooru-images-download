@@ -1,9 +1,8 @@
 Gbooru Images Download
 ======================
 
-.. image:: https://travis-ci.org/rachmadaniHaryono/google-images-download.svg?branch=master
-    :target: https://travis-ci.org/rachmadaniHaryono/google-images-download
-    :alt: Latest Travis CI build status
+.. image:: https://travis-ci.org/rachmadaniHaryono/gbooru-images-download.svg?branch=master
+    :target: https://travis-ci.org/rachmadaniHaryono/gbooru-images-download
 
 Simple booru for hydrus
 
