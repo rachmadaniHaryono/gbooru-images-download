@@ -23,6 +23,7 @@ from gbooru_images_download.forms import FindImageForm
 
 
 log = structlog.getLogger(__name__)
+APP_DATA_DIR = user_data_dir('gbooru_images_download', 'rachmadaniharyono')
 
 
 class ImageURLSingleView(BaseView):
@@ -31,7 +32,7 @@ class ImageURLSingleView(BaseView):
         """View for single image url."""
         kwargs = {}
         kwargs['search_url'] = request.args.get('u', None)
-        kwargs['entry'] = models.ImageURL.query.filter_by(url=kwargs['search_url']).one_or_none()
+        kwargs['entry'] = models.ImageUrl.query.filter_by(url=kwargs['search_url']).one_or_none()
         return self.render('gbooru_images_download/image_url_view.html', **kwargs)
 
 
@@ -165,9 +166,9 @@ def create_app(script_info=None):
     """create app."""
     app = Flask(__name__)
     # logging
-    if not os.path.exists(models.APP_DATA_DIR):
-        os.makedirs(models.APP_DATA_DIR)
-    log_dir = os.path.join(models.APP_DATA_DIR, 'log')
+    if not os.path.exists(APP_DATA_DIR):
+        os.makedirs(APP_DATA_DIR)
+    log_dir = os.path.join(APP_DATA_DIR, 'log')
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     default_log_file = os.path.join(log_dir, 'gbooru_images_download_server.log')
@@ -180,7 +181,11 @@ def create_app(script_info=None):
     if reloader:
         app.jinja_env.auto_reload = True
     # app config
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('GID_SQLALCHEMY_DATABASE_URI') or 'sqlite:///gid_debug.db'  # NOQA
+    database_path = 'gid_debug.db'
+    database_exist = os.path.isfile(database_path)
+    database_uri = 'sqlite:///' + database_path
+    app.config['SQLALCHEMY_DATABASE_URI'] = \
+        os.getenv('GID_SQLALCHEMY_DATABASE_URI') or database_uri # NOQA
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('GID_SERVER_SECRET_KEY') or os.urandom(24)
     app.config['WTF_CSRF_ENABLED'] = False
@@ -197,6 +202,33 @@ def create_app(script_info=None):
     app.app_context().push()
     models.db.create_all()
 
+    # default value for database
+    if not database_exist:
+        session = models.db.session
+        hidden_nms = [
+            'cb', 'cl', 'cr', 'ct', 'id', 'imgres url', 'msm', 'msu', 'rt', 'rh'
+            'si', 'sm', 'th', 'tu', 'tw',
+        ]
+        for nm in hidden_nms:
+            nm_m = models.get_or_create(session, models.Namespace, value=nm)[0]
+            hnm = models.get_or_create(session, models.HiddenNamespace, namespace=nm_m)[0]
+            session.add(hnm)
+        nms_class_dict = {
+            'imgref url': 'tag-page-url',
+            'isu': 'tag-site',
+            'search query': 'tag-query',
+            'st': 'tag-site-title',
+            'ru': 'tag-page-url',
+            'pt': 'tag-picture-title',
+            's': 'tag-picture-subtitle',
+        }
+        for nm, cl in nms_class_dict.items():
+            nm_m = models.get_or_create(session, models.Namespace, value=nm)[0]
+            nm_hc_m = models.get_or_create(
+                session, models.NamespaceHtmlClass, namespace=nm_m, value=cl)[0]
+            session.add(nm_hc_m)
+        session.commit()
+
     @app.shell_context_processor
     def shell_context():
         return {'app': app, 'db': models.db}
@@ -209,17 +241,17 @@ def create_app(script_info=None):
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.JSONDataView(models.JSONData, models.db.session, category='History', name='JSON Data'))  # NOQA
-    app_admin.add_view(admin.ImageURLView(models.ImageURL, models.db.session, category='History', name='Image URL'))  # NOQA
+    app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
+    app_admin.add_view(admin.ImageUrlView(models.ImageUrl, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
-    app_admin.add_view(admin.ImageFileView(models.ImageFile, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
     # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.FilteredImageURLView(models.FilteredImageURL, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
+    app_admin.add_view(admin.FilteredImageUrlView(models.FilteredImageUrl, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenTag, models.db.session, category='Filter'))  # NOQA
+    app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
 
     # routing
     app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda filename:send_from_directory(models.DEFAULT_THUMB_FOLDER, filename))  # NOQA
