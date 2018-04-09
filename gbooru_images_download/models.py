@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Model module."""
 from datetime import datetime
-import os
 
-from appdirs import user_data_dir
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
@@ -113,12 +111,25 @@ class Namespace(SingleStringModel):
     def __repr__(self):
         return '<Namespace:{0.id} {0.value}>'.format(self)
 
+    def format_html_class(self):
+        if self.html_class:
+            return ' '.join([x.value for x in self.html_class])
+        return ''
+
 
 class HiddenNamespace(Base):
     namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
     namespace = db.relationship(
         'Namespace', foreign_keys='HiddenNamespace.namespace_id', lazy='subquery',
         backref=db.backref('hidden', lazy=True, cascade='delete'))
+
+
+class NamespaceHtmlClass(Base):
+    value = db.Column(db.String)
+    namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
+    namespace = db.relationship(
+        'Namespace', foreign_keys='NamespaceHtmlClass.namespace_id', lazy='subquery',
+        backref=db.backref('html_class', lazy=True, cascade='delete'))
 
 
 class Tag(SingleStringModel):
