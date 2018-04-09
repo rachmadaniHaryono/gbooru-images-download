@@ -45,7 +45,7 @@
 <div class="row">
 {% for match_result in match_results %}
   <figure class="col-md-3">
-    <a class="" href="{{url_for('u.index', u=match_result.img_url.url)}}">
+    <a class="thumb" href="{{url_for('u.index', u=match_result.img_url.url)}}">
       <img style="" class="img-responsive" src="{{match_result.thumbnail_url.url}}">
     </a>
     <figcaption>
