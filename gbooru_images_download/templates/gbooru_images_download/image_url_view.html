@@ -1,6 +1,8 @@
 {% extends 'admin/base.html' %}
+
 {% block body %}
 {% if entry.match_results %}
+
 <div class="col-sm-12">
   <figure class="col-sm-3">
     <a class="thumb" href="{{entry.url}}">
@@ -22,12 +24,11 @@
   {% for tag in entry.tags|sort(attribute='namespace.value') %}
     {% if tag.namespace.hidden %}
     {% elif tag.hidden %}
-    {% elif not tag.namespace %}
-    <tr><th></th><td> <a href="#" class="tag-general">{{tag.name}}</a></td></tr>
-    {% elif tag.namespace.value == 'image page url'%}
-    <tr><th>{{tag.namespace.value}}</th><td> <a href="#" class="tag-page-url">{{tag.name}}</a></td></tr>
     {% else %}
-    <tr><th>{{tag.namespace.value}}</th><td> <a href ="#" class="{{'tag-' + tag.namespace.value|replace(' ', '-')}}">{{tag.name}}</a></td></tr>
+    <tr>
+      <th>{{tag.namespace.value}}</th>
+      <td> <a href ="#" class="{{tag.namespace.format_html_class()}}"> {{tag.value}}</a></td>
+    </tr>
     {% endif %}
   {% endfor %}
   </table>
@@ -46,10 +47,8 @@
     </tr>
     {% for key, value in match_result.__dict__.items() %}
       {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
-      {% elif key == 'search_query' and value %}
-      <tr><th>{{key|replace('_', ' ')}}</th><td><a class="tag-query" href="{{href}}">{{value.search_query}}</a>, page:{{value.page}}</td></tr>
       {% else %}
-      <tr><th>{{key|replace('_', ' ')}}</th><td>{{value}}</td></tr>
+        <tr><th>{{key|replace('_', ' ')}}</th><td>{{value}}</td></tr>
       {% endif %}
     {% endfor %}
   </table>
