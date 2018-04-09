@@ -64,6 +64,7 @@ def test_get_or_create_match_result_from_json_resp(tmp_db):
     assert all([x.img_url for x in m_list])
 
 
+@pytest.mark.no_travis
 def test_add_tags_to_image_url(tmp_db):
     """test method."""
     args = {
