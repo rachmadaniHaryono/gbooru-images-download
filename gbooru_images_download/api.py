@@ -18,7 +18,7 @@ except ImportError:
     SELENIUM_ENABLED = False
 
 import gbooru_images_download as gid
-from . import models
+from . import models, exceptions
 
 log = structlog.getLogger(__name__)
 
@@ -254,18 +254,24 @@ def parse_img_search_html(html):
     kwargs = {}
     # parsing: size_search_url
     size_search_tag = search_page.select_one('._v6 .gl a')
+    if not size_search_tag:
+        size_search_tag = search_page.select_one('.card-section span > a[href^="/search"]')
     if size_search_tag:
         size_search_url = size_search_tag.attrs.get('href', None)
         if size_search_url:
             kwargs['size_search_url'] = urljoin(base_url, size_search_url)
     # parsing: similar search url
     similar_search_tag = search_page.select_one('h3._DM a')
+    if not similar_search_tag:
+        similar_search_tag = search_page.select_one('h3 a[href^="/search"]')
     if similar_search_tag:
         similar_search_url = similar_search_tag.attrs.get('href', None)
         if similar_search_url:
             kwargs['similar_search_url'] = urljoin(base_url, similar_search_url)
     # parsing: image guess
     image_guess_tag = search_page.select_one('._hUb a')
+    if not image_guess_tag:
+        image_guess_tag = search_page.select_one('.card-section > div > a')
     if image_guess_tag:
         kwargs['img_guess'] = image_guess_tag.text
     # parsing: main similar result
@@ -282,6 +288,8 @@ def parse_img_search_html(html):
     kwargs['MainSimilarResult'] = msr_models
     # parsing: text match parsing
     text_match_tags = search_page.select('._NId > .srg > .g')
+    if not text_match_tags:
+        text_match_tags = search_page.select('.srg > .g')
     tm_models = []
     if text_match_tags:
         for tag in text_match_tags:
@@ -452,7 +460,7 @@ def get_or_create_search_image_page(file_path=None, url=None, **kwargs):
         if not gr_url:
             session.add(sm_model)
             session.commit()
-            raise gid.exceptions.NoResultFound('No url found for search type: {}'.format(search_type))  # NOQA
+            raise exceptions.NoResultFound('No url found for search type: {}'.format(search_type))  # NOQA
         user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1'  # NOQA
         resp = requests.get(gr_url, headers={'User-Agent': user_agent}, timeout=10)
         soup = BeautifulSoup(resp.text, 'html.parser')
