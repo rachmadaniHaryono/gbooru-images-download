@@ -311,8 +311,8 @@ class SearchImageView(CustomModelView):
             )) if m.size_search_url else Markup(''),
     }
     column_exclude_list = ('search_url', 'similar_search_url', 'size_search_url' )  # NOQA
-    column_searchable_list = ('searched_img_url.url', )
-    column_list = ('created_at', 'searched_img_url', 'img_guess', 'Result')
+    column_searchable_list = ('img_url.url', )
+    column_list = ('created_at', 'img_url', 'img_guess', 'Result')
 
 
 class SearchImagePageView(CustomModelView):

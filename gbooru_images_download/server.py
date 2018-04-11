@@ -57,7 +57,7 @@ class FromFileSearchImageView(BaseView):
                 kwargs['session'] = session
             session = models.db.session if session is None else session
             try:
-                entry, created = api.get_or_create_page_search_image(**kwargs)
+                entry, created = api.get_or_create_search_image_page(**kwargs)
                 if created or disable_cache:
                     session.add(entry)
                     session.commit()
