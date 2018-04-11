@@ -216,11 +216,13 @@ def create_app(script_info=None):
         nms_class_dict = {
             'imgref url': 'tag-page-url',
             'isu': 'tag-site',
+            'page url': 'tag-page-url',
+            'pt': 'tag-picture-title',
+            'ru': 'tag-page-url',
+            's': 'tag-picture-subtitle',
             'search query': 'tag-query',
             'st': 'tag-site-title',
-            'ru': 'tag-page-url',
-            'pt': 'tag-picture-title',
-            's': 'tag-picture-subtitle',
+            'title': 'tag-picture-title',
         }
         for nm, cl in nms_class_dict.items():
             nm_m = models.get_or_create(session, models.Namespace, value=nm)[0]

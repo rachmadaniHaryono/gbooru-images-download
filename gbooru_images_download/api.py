@@ -163,13 +163,13 @@ def add_tags_to_image_url(img_url, tags, session=None):
     session = models.db.session if session is None else session
     tags_models = []
     for tag in tags:
-        name = tag['name']
+        name = tag['value']
         namespace = tag['namespace']
         if not name:
             log.warning('tag only contain namespace', namespace=namespace)
             continue
         namespace_m = models.get_or_create(session, models.Namespace, value=namespace)[0]
-        tag_m_kwargs = dict(name=name, namespace_id=namespace_m.id)
+        tag_m_kwargs = dict(value=name, namespace_id=namespace_m.id)
         tag_m = models.get_or_create(session, models.Tag, **tag_m_kwargs)[0]
         if tag_m not in img_url.tags:
             img_url.tags.append(tag_m)
@@ -369,14 +369,14 @@ def get_or_create_search_image(file_path=None, url=None, search_url=None, **kwar
             tags = item.pop('img_url_tags', [])
             item_m = models.get_or_create(session, models.TextMatch, **item)[0]
             if img_url and thumbnail_url:
-                img_url_m = models.get_or_create(session, models.ImageURL, **img_url)[0]
+                img_url_m = models.get_or_create(session, models.ImageUrl, **img_url)[0]
                 tags.extend([
-                    {'namespace': 'page url', 'name': item['url']},
-                    {'namespace': 'title', 'name': item['title']},
-                    {'namespace': 'page url text', 'name': item['url_text']}
+                    {'namespace': 'page url', 'value': item['url']},
+                    {'namespace': 'title', 'value': item['title']},
+                    {'namespace': 'page url text', 'value': item['url_text']}
                 ])
                 add_tags_to_image_url(img_url_m, tags=tags, session=session)
-                thumbnail_url_m = models.get_or_create(session, models.ImageURL, **thumbnail_url)[0]  # NOQA
+                thumbnail_url_m = models.get_or_create(session, models.ImageUrl, **thumbnail_url)[0]  # NOQA
                 # text match img model
                 item_m.img = models.get_or_create(
                     session, models.MatchResult, img_url=img_url_m, thumbnail_url=thumbnail_url_m)[0]  # NOQA
@@ -412,11 +412,11 @@ def parse_text_match(html_tag, base_url=None):
         }
         kwargs['thumbnail_url'] = thumbnail_url_dict_input
         img_url_tags = [
-            {'namespace': 'imgres url', 'name': imgres_url},
+            {'namespace': 'imgres url', 'value': imgres_url},
         ]
         if imgref_url:
-            img_url_tags.append({'namespace': 'page url', 'name': imgref_url})
-            img_url_tags.append({'namespace': 'imgref url', 'name': imgref_url})
+            img_url_tags.append({'namespace': 'page url', 'value': imgref_url})
+            img_url_tags.append({'namespace': 'imgref url', 'value': imgref_url})
         kwargs['img_url_tags'] = img_url_tags
     return kwargs
 
