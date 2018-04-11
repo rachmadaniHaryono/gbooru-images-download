@@ -154,9 +154,9 @@ class HiddenTag(Base):
 
 class SearchImage(Base):
     """Search image"""
-    searched_img_checksum = db.Column(db.String)
-    searched_img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
-    searched_img_url = db.relationship(
+    img_checksum = db.Column(db.String)
+    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
+    img_url = db.relationship(
         'ImageUrl', lazy='subquery',
         backref=db.backref('search_image', lazy=True))
     # url result

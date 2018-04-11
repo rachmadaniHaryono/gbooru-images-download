@@ -180,11 +180,15 @@ def add_tags_to_image_url(img_url, tags, session=None):
     return tags_models
 
 
-def get_html_text_from_search_url(search_url=None, img_url=None):
-    """Get HTML text from search url"""
-    if not((search_url or img_url) and not (search_url and img_url)):
-        raise ValueError('search url or image url only')
+def get_html_text(search_url):
+    """Get HTML text from search url.
 
+    Args:
+        search_url: search url
+    Returns:
+        html text
+
+    """
     def get_html_text_with_selenium(url):
         options = Options()
         options.add_argument("--headless")
@@ -202,11 +206,6 @@ def get_html_text_from_search_url(search_url=None, img_url=None):
 
     user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1'  # NOQA
     headers = {'User-Agent': user_agent}
-    if not search_url and img_url:
-        url_templ = 'https://www.google.com/searchbyimage?image_url={}&safe=off'
-        search_url_from_image = url_templ.format(quote_plus(img_url))
-        resp = requests.get(search_url_from_image, headers=headers, timeout=10)
-        search_url = resp.url
     parsed_su = urlparse(search_url)
     # su = search_url
     su_redirected = (parsed_su.netloc, parsed_su.path) == ('ipv4.google.com', '/sorry/index')
@@ -225,22 +224,34 @@ def get_html_text_from_search_url(search_url=None, img_url=None):
         elif keyword_text in html_text:
             raise ValueError('Unusual traffic detected')
     else:
-        raise ValueError('Unknown condition, search url: {} url: {}'.format(search_url, img_url))
-    return {'html_text': html_text, 'search_url': search_url}
+        raise ValueError('Unknown condition, search url: {}'.format(search_url))
+    return html_text
 
 
-def get_search_url_from_img(file_path):
+def get_search_url(file_path=None, img_url=None):
+    if not((file_path or img_url) and not (file_path and img_url)):
+        raise ValueError('image url or file path only')
+    if file_path:
         search_url = 'http://www.google.com/searchbyimage/upload'
         multipart = {'encoded_image': (file_path, open(file_path, 'rb')), 'image_content': ''}
         response = requests.post(search_url, files=multipart, allow_redirects=False)
         return response.headers['Location']
+    elif img_url:
+        url_templ = 'https://www.google.com/searchbyimage?image_url={}&safe=off'
+        search_url_from_image = url_templ.format(quote_plus(img_url))
+        user_agent = 'Mozilla/5.0 (Windows NT 6.2; Win64; x64; rv:16.0.1) Gecko/20121011 Firefox/16.0.1'  # NOQA
+        headers = {'User-Agent': user_agent}
+        resp = requests.get(search_url_from_image, headers=headers, timeout=10)
+        return resp.url
+    else:
+        raise ValueError('Unknown condition, file path:{} url:{}'.format(file_path, img_url))
 
 
-def parse_img_search_html(html, base_url=None):
+def parse_img_search_html(html):
     """parse image search html."""
+    base_url = 'https://www.google.com'
     search_page = html
     kwargs = {}
-    base_url = base_url if base_url is not None else 'https://www.google.com'
     # parsing: size_search_url
     size_search_tag = search_page.select_one('._v6 .gl a')
     if size_search_tag:
@@ -274,13 +285,13 @@ def parse_img_search_html(html, base_url=None):
     tm_models = []
     if text_match_tags:
         for tag in text_match_tags:
-            item = parse_text_match_html_tag(tag, base_url=base_url)
+            item = parse_text_match(tag, base_url=base_url)
             tm_models.append(item)
     kwargs['TextMatch'] = tm_models
     return kwargs
 
 
-def get_or_create_search_image(file_path=None, url=None, **kwargs):
+def get_or_create_search_image(file_path=None, url=None, search_url=None, **kwargs):
     """get match result from file.
 
     Args:
@@ -299,41 +310,44 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
     base_url = 'https://www.google.com' if base_url is None else base_url
     session = models.db.session if session is None else session
     if not((file_path or url) and not (file_path and url)):
-        raise ValueError('input url or file_path only')
+        raise ValueError('input url or file path only')
     html_text = None
-    search_url = None
     if file_path:
-        searched_img_checksum = sha256_checksum(file_path)
-        model, created = models.get_or_create(session, models.SearchImage, searched_img_checksum=searched_img_checksum)  # NOQA
+        checksum = sha256_checksum(file_path)
+        model = models.SearchImage.query.filter_by(img_checksum=checksum).first()
+        created = True if not model else False
     elif url:
-        instance = models.SearchImage.query.filter_by(searched_img_url=url).first()
-        model = None
-        created = False
-        if not instance:
-            func_res = get_html_text_from_search_url(img_url=url)
-            search_url = func_res['search_url']
-            html_text = func_res['html_text']
-            instance = models.SearchImage.query.filter_by(searched_img_url=url).first()
-            if not instance:
-                model, created = models.get_or_create(session, models.SearchImage, search_url=search_url, searched_img_url=url)  # NOQA
-        if model is None:
-            model = instance
-        model.searched_img_url = url
+        img_url_m = models.ImageUrl.query.filter_by(url=url).first()
+        model, created = None, False
+        if img_url_m:
+            model = models.SearchImage.query.filter_by(img_url=img_url_m).first()
+        if not model:
+            search_url = get_search_url(img_url=url)
+            model, created = models.get_or_create(
+                session, models.SearchImage, search_url=search_url)
+            if not img_url_m:
+                img_url_m = models.get_or_create(session, models.ImageUrl, url=url)
+            model.searched_img_url = img_url_m
+        else:
+            created = True
+    elif search_url:
+        model, created = models.get_or_create(session, models.SearchImage, search_url=search_url)
     else:
-        raise ValueError('Unknown condition, file path: {} url: {}'.format(file_path, url))
+        raise ValueError('Unknown condition, file path:{} url:{}'.format(file_path, url))
     if created or disable_cache:
         if file_path:
-            search_url = get_search_url_from_img(file_path)
-            func_res = get_html_text_from_search_url(search_url=search_url)
-            html_text = func_res['html_text']
-            search_url = func_res['search_url']
-        if url and not html_text:
-            func_res = get_html_text_from_search_url(img_url=url)
-            html_text = func_res['html_text']
-            search_url = func_res['search_url']
+            search_url = get_search_url(file_path=file_path)
+            if model is None:
+                model = models.get_or_create(session, models.SearchImage, search_url=search_url)[0]
+            model.img_checksum = checksum
+        if search_url and not html_text:
+            html_text = get_html_text(search_url=search_url)
+        elif not search_url:
+            raise ValueError('No search url found.')
+        model.search_url = search_url
+        # parsing
         search_page = BeautifulSoup(html_text, 'lxml')
         data = parse_img_search_html(search_page)
-        model.search_url = search_url
         msr_kwargs = data.pop('MainSimilarResult')
         tm_kwargs = data.pop('TextMatch')
         for key in data:
@@ -359,11 +373,11 @@ def get_or_create_search_image(file_path=None, url=None, **kwargs):
                 item_m.img = models.get_or_create(
                     session, models.MatchResult, img_url=img_url_m, thumbnail_url=thumbnail_url_m)[0]  # NOQA
             model.text_matches.append(item_m)
-        session.add(model)
+    session.add(model)
     return model, created
 
 
-def parse_text_match_html_tag(html_tag, base_url=None, session=None):
+def parse_text_match(html_tag, base_url=None):
     """Parse text match html tag."""
     base_url = 'https://www.google.com' if base_url is None else base_url
     kwargs = {}
@@ -399,7 +413,7 @@ def parse_text_match_html_tag(html_tag, base_url=None, session=None):
     return kwargs
 
 
-def get_or_create_page_search_image(file_path=None, url=None, **kwargs):
+def get_or_create_search_image_page(file_path=None, url=None, **kwargs):
     """Get or create page from search image.
 
     Args:
@@ -443,9 +457,10 @@ def get_or_create_page_search_image(file_path=None, url=None, **kwargs):
         resp = requests.get(gr_url, headers={'User-Agent': user_agent}, timeout=10)
         soup = BeautifulSoup(resp.text, 'html.parser')
         for html_tag in soup.select('.rg_bx'):
-            data = get_data(html_tag, session=session)
+            data = get_data(html_tag)
             mr_model = get_or_create_match_result(session=session, data=data)[0]
         model.match_results.append(mr_model)
+    session.add(model)
     return model, created
 
 
