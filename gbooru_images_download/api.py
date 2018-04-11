@@ -352,6 +352,11 @@ def get_or_create_search_image(file_path=None, url=None, search_url=None, **kwar
             html_text = get_html_text(search_url=search_url)
         elif not search_url:
             raise ValueError('No search url found.')
+        parsed_su = urlparse(search_url)
+        if (parsed_su.netloc, parsed_su.path) == ('ipv4.google.com', '/sorry/index'):
+            search_url = parse_qs(parsed_su.query).get('continue', [None])[0]
+            if not search_url:
+                raise ValueError('Unknown format: {}'.format(search_url))
         model.search_url = search_url
         # parsing
         search_page = BeautifulSoup(html_text, 'lxml')
@@ -467,7 +472,7 @@ def get_or_create_search_image_page(file_path=None, url=None, **kwargs):
         for html_tag in soup.select('.rg_bx'):
             data = get_data(html_tag)
             mr_model = get_or_create_match_result(session=session, data=data)[0]
-        model.match_results.append(mr_model)
+            model.match_results.append(mr_model)
     session.add(model)
     return model, created
 
