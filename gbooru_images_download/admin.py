@@ -279,21 +279,20 @@ class SearchImageView(CustomModelView):
         return Markup(res)
 
     def _img_guess_formatter(view, context, model, name):
-        res = '<p>Image guess: {}</p>'.format(
-            Markup('<a href={}>{}</a>'.format(
+        if not model.img_guess:
+            return Markup('')
+        else:
+            return Markup('<a href={}>{}</a>'.format(
                 url_for('admin.index', query=model.img_guess), model.img_guess))
-        ) if model.img_guess else ''
-        if model.searched_img_url:
-            res += '<p>Searched Url:</p>'
-            res += '<a href="{}">{}</a>'.format(
-                model.searched_img_url.url,
-                '<br>'.join(textwrap.wrap(model.searched_img_url)))
-        return Markup(res)
 
     column_formatters = {
         'created_at': date_formatter,
         'Result': _result_formatter,
         'img_guess': _img_guess_formatter,
+        'img_url':
+            lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(
+                m.img_url.url,
+            )),
         'search_url':
             lambda v, c, m, p: Markup('<a href="{1}">{0}</a>'.format(
                 Markup('<br>'.join(textwrap.wrap(m.search_url))),
