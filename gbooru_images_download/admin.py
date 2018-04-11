@@ -292,7 +292,7 @@ class SearchImageView(CustomModelView):
         'img_url':
             lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(
                 m.img_url.url,
-            )),
+            ) if m.img_url else ''),
         'search_url':
             lambda v, c, m, p: Markup('<a href="{1}">{0}</a>'.format(
                 Markup('<br>'.join(textwrap.wrap(m.search_url))),
