@@ -8,6 +8,7 @@ import tempfile
 
 from bs4 import BeautifulSoup
 from PIL import Image
+from sqlalchemy.exc import OperationalError
 import requests
 import structlog
 try:
@@ -90,8 +91,11 @@ def get_or_create_image_url(dict_input, session=None):
         {'url': 'example.com/1.jpg', 'height': 100, 'width':100}
     """
     session = models.db.session if session is None else session
-    m, created = models.get_or_create(
-        session, models.ImageUrl, url=dict_input['url'])
+    try:
+        m, created = models.get_or_create(session, models.ImageUrl, url=dict_input['url'])
+    except OperationalError as e:
+        with session.no_autoflush:
+            m, created = models.get_or_create(session, models.ImageUrl, url=dict_input['url'])
     if dict_input['width']:
         m.width = dict_input['width']
     if dict_input['height']:
