@@ -93,6 +93,14 @@ class ImageUrl(Base):
         'Tag', secondary=image_url_tags, lazy='subquery',
         backref=db.backref('image_urls', lazy=True))
 
+    def get_sorted_tags(self):
+        nnm_t, nm_t = [], []
+        for tag in self.tags:
+            (nnm_t, nm_t)[bool(tag.namespace)].append(tag)
+        res = sorted(nm_t, key=lambda x: x.namespace.value)
+        res.extend(sorted(nnm_t, key=lambda x: x.value))
+        return res
+
     def __repr__(self):
         templ = '<ImageUrl:{0.id} url:{0.url} w:{0.width} h:{0.height}>'
         return templ.format(self)

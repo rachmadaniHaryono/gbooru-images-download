@@ -21,13 +21,15 @@
 <div>
   <h3>Tags</h3>
   <table class="table table-condensed table-bordered">
-  {% for tag in entry.tags|sort(attribute='namespace.value') %}
+  {% for tag in entry.get_sorted_tags() %}
     {% if tag.namespace.hidden %}
     {% elif tag.hidden %}
     {% else %}
     <tr>
       <th>{{tag.namespace.value}}</th>
-      <td> <a href ="#" class="{{tag.namespace.format_html_class()}}"> {{tag.value}}</a></td>
+      <td>
+        <a href ="#" class="{{tag.namespace.format_html_class() if tag.namespace}}"> {{tag.value}}</a>
+      </td>
     </tr>
     {% endif %}
   {% endfor %}
