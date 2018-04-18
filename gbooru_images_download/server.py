@@ -14,6 +14,7 @@ from flask.views import View
 from flask_admin import Admin, BaseView, expose
 from flask_admin._compat import text_type
 from flask_admin.contrib.sqla import fields, ModelView
+from flask_migrate import Migrate
 from sqlalchemy.orm.util import identity_key
 import click
 import structlog
@@ -195,7 +196,7 @@ def create_app(script_info=None):
         app.config['DEBUG'] = True
         app.config['LOGGER_HANDLER_POLICY'] = 'debug'
         logging.basicConfig(level=logging.DEBUG)
-        pprint.pprint(app.config)
+        # pprint.pprint(app.config)
         print('Log file: {}'.format(default_log_file))
     # app and db
     models.db.init_app(app)
@@ -235,6 +236,7 @@ def create_app(script_info=None):
     def shell_context():
         return {'app': app, 'db': models.db}
 
+    Migrate(app, models.db)
     # flask-admin
     app_admin = Admin(
         app, name='Gbooru images download', template_mode='bootstrap3',
@@ -247,7 +249,7 @@ def create_app(script_info=None):
     app_admin.add_view(admin.ImageUrlView(models.ImageUrl, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
-    # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.FilteredImageUrlView(models.FilteredImageUrl, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
