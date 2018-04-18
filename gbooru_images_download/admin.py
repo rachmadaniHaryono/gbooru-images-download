@@ -8,6 +8,7 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.filters import BaseSQLAFilter
 from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup
+from sqlalchemy.sql import not_
 import humanize
 import structlog
 
@@ -91,47 +92,72 @@ class SearchQueryView(CustomModelView):
     column_filters = ('page', 'search_term.value')
 
 
+class FilterMatchResultSearchQuery(BaseSQLAFilter):
+    def apply(self, query, value, alias=None):
+        res = query.filter(
+            self.column.search_queries.contains(models.SearchQuery.query.get(value)))
+        return res
+
+    def operation(self):
+        return 'equal'
+
+    def get_options(self, view):
+        return [
+            (str(x.id), "'{}' page:{}".format(x.search_term.value, x.page))
+            for x in models.SearchQuery.query.all()
+        ]
+
+
+class FilterMatchResultFilteredUrl(BaseSQLAFilter):
+    def apply(self, query, value, alias=None):
+        # __import__('pdb').set_trace()
+        furl_res = query.join('img_url').filter(models.ImageUrl.filtered)
+        if value == '1':
+            res = furl_res
+        else:
+            res = query.filter(
+                models.MatchResult.id.notin_([x.id for x in furl_res.all() if hasattr(x, 'id')]))
+        return res
+
+    def operation(self):
+        return 'in filter list'
+
+
 class MatchResultView(CustomModelView):
     """Custom view for MatchResult model."""
 
-    def _image_formatter(view, context, model, name):
-        desc_table = '<tr><th>Title</th><td>{}</td></tr>'.format(model.picture_title)
-        if model.picture_subtitle:
-            desc_table += '<tr><th>Subtitle</th><td>{}</td></tr>'.format(model.picture_subtitle)
-        desc_table += '<tr><th>Site</th><td><a href="https://{0}">{0}</a></td></tr>'.format(
-            model.site)
-        desc_table += '<tr><th>Site title</th><td>{}</td></tr>'.format(model.site_title)
-        desc_table = '<table class="table table-condensed table-bordered">{}</table>'.format(
-            desc_table)
-        template = '<a href="{1}"><img class="img-responsive center-block" src="{0}"></a><br>{2}'
-        return Markup(template.format(model.thumb_url, model.img_url, desc_table))
-
     @staticmethod
-    def format_thumbnail(m):
+    def format_entry(m):
         templ = '<a href="{1}"><img src="{0}"></a>'
         if m.img_url:
             return Markup(templ.format(m.thumbnail_url.url, m.img_url.url))
         return Markup(templ.format(m.thumbnail_url.url, m.thumbnail_url.url))
 
     @staticmethod
-    def format_json_data(json_data):
-        return Markup('<p><a href="{}">{}</a></p>'.format(
-            url_for('jsondata.details_view', id=json_data.id), Markup.escape(json_data)))  # NOQA
+    def format_img_url(m, p):
+        data = getattr(m, p)
+        return Markup("""
+            <a href={1}>ID:{0.id}, size:{0.width}x{0.height}</a><br/>
+            <a href="{0.url}">{0.url}</a>
+            """.format(
+            data,
+            url_for('imageurl.details_view', id=data.id),
+        ))
 
     column_formatters = {
         'created_at': date_formatter,
-        'json_data': lambda v, c, m, p: MatchResultView.format_json_data(m.json_data),
-        'thumbnail_url': lambda v, c, m, p: MatchResultView.format_thumbnail(m),
-        'img_url': lambda v, c, m, p:
-        Markup("""
-            <p><a href={1}>ID:{0.id},size:{0.width}x{0.height}</a></p>
-            <p><a href="{0.url}">{2}</a></p>""".format(
-            m.img_url,
-            url_for('imageurl.details_view', id=m.img_url.id),
-            '<br>'.join(textwrap.wrap(m.img_url.url))
-        )),
+        'Entry': lambda v, c, m, p: MatchResultView.format_entry(m),
+        'img_url': lambda v, c, m, p: MatchResultView.format_img_url(m, p),
+        'thumbnail_url': lambda v, c, m, p: MatchResultView.format_img_url(m, p),
     }
-    column_exclude_list = ('img_url', 'json_data')
+    column_filters = [
+        FilterMatchResultSearchQuery(column=models.MatchResult, name='search query'),
+        FilterMatchResultFilteredUrl(
+            column=models.MatchResult, name='url filtered',
+            options=(('1', 'yes'), ('0', 'no'))
+        )
+    ]
+    column_list = ('created_at', 'Entry')
     can_view_details = True
     page_size = 100
 
