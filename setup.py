@@ -9,12 +9,6 @@ from pipenv.utils import convert_deps_to_pip
 with open('README.rst', encoding='utf-8') as f:
     long_description = f.read()
 
-pfile = Project().parsed_pipfile
-install_requires = convert_deps_to_pip(pfile['packages'], r=False)
-tests_require = convert_deps_to_pip(pfile['dev-packages'], r=False)
-if '-e .' in tests_require:
-    tests_require.remove('-e .')
-
 setup(
     name='gbooru-images-download',
     description="Simple booru for hydrus",
@@ -26,10 +20,34 @@ setup(
     # "rachmadaniHaryono/google-images-download/tarball/' + __version__,
     license='MIT',
     zip_safe=True,
+    install_requires=[
+        'appdirs>=1.4.3',
+        'beautifulsoup4>=4.6.0',
+        'click>=6.7',
+        'fake-useragent>=0.1.10',
+        'Flask-Admin>=1.5.0',
+        'flask-paginate>=0.5.1',
+        'flask-sqlalchemy>=2.3.2',
+        'Flask-WTF>=0.14.2',
+        'Flask>=0.12.2',
+        'furl>=1.0.1',
+        'humanize>=0.5.1',
+        'lxml>=4.1.1',
+        'pillow>=5.0.0',
+        'requests>=2.18.4',
+        'send2trash>=1.5.0',
+        'SQLAlchemy-Utils>=0.32.18',
+        'sqlalchemy>=1.2.4',
+        'structlog>=18.1.0',
 
-    install_requires=install_requires,
-    setup_requires=['pytest-runner', 'pipenv'],
-    tests_require=tests_require,
+    ],
+    setup_requires=['pytest-runner'],
+    tests_require=[
+        'flake8>=3.3.0',
+        'pylint>=1.7.4',
+        'tox>=2.7.0',
+        'vcrpy>=1.11.1',
+    ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
