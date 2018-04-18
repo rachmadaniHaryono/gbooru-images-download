@@ -47,6 +47,7 @@
 <div>
   <h3>Tags</h3>
   <table class="table table-condensed table-bordered">
+  <tr><th>filename</th><td><a href="#" class="tag-filename">{{model.filename}}</a></td>
   {% for tag in model.get_sorted_tags() %}
     {% if tag.namespace.hidden %}
     {% elif tag.hidden %}

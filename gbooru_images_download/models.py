@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Model module."""
 from datetime import datetime
+import os
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
@@ -100,6 +102,15 @@ class ImageUrl(Base):
         res = sorted(nm_t, key=lambda x: x.namespace.value)
         res.extend(sorted(nnm_t, key=lambda x: x.value))
         return res
+
+    @hybrid_property
+    def filename(self):
+        url = str(self.url)
+        if self.url.host == 'images-blogger-opensocial.googleusercontent.com' \
+                and str(self.url.path) == '/gadgets/proxy' \
+                and 'url' in self.url.query.params:
+            url = self.url.query.params['url']
+        return os.path.splitext(os.path.basename(url))[0]
 
     def __repr__(self):
         templ = '<ImageUrl:{0.id} url:{0.url} w:{0.width} h:{0.height}>'
