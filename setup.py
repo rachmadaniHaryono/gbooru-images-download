@@ -9,6 +9,13 @@ from pipenv.utils import convert_deps_to_pip
 with open('README.rst', encoding='utf-8') as f:
     long_description = f.read()
 
+test_deps = [
+    'flake8>=3.3.0',
+    'pylint>=1.7.4',
+    'tox>=2.7.0',
+    'vcrpy>=1.11.1',
+]
+
 setup(
     name='gbooru-images-download',
     description="Simple booru for hydrus",
@@ -39,15 +46,12 @@ setup(
         'SQLAlchemy-Utils>=0.32.18',
         'sqlalchemy>=1.2.4',
         'structlog>=18.1.0',
-
     ],
+    tests_require=test_deps,
+    extras_require={
+        'test': test_deps,
+    },
     setup_requires=['pytest-runner'],
-    tests_require=[
-        'flake8>=3.3.0',
-        'pylint>=1.7.4',
-        'tox>=2.7.0',
-        'vcrpy>=1.11.1',
-    ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
