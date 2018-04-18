@@ -32,6 +32,8 @@ class ImageURLSingleView(BaseView):
         """View for single image url."""
         url = request.args.get('u', None)
         entry = models.ImageUrl.query.filter_by(url=url).one_or_none()
+        if not entry:
+            return self.render('gbooru_images_download/image_url_view.html', entry=None)
         return redirect(url_for('imageurl.details_view', id=entry.id))
 
 
