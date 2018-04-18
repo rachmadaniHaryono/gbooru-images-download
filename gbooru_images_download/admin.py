@@ -153,17 +153,6 @@ class JsonDataView(CustomModelView):
     column_formatters = {'created_at': date_formatter, 'value': _value_formatter, }
 
 
-class FilterThumbnail(BaseSQLAFilter):
-    def apply(self, query, value, alias=None):
-        if value == '1':
-            return query.filter(self.column.thumbnail_match_results.any())
-        else:
-            return query.filter(~self.column.thumbnail_match_results.any())
-
-    def operation(self):
-        return 'is thumbnail'
-
-
 class ImageUrlView(CustomModelView):
     """Custom view for ImageURL model."""
 
@@ -183,7 +172,7 @@ class ImageUrlView(CustomModelView):
     column_filters = [
         'width',
         'height',
-        FilterThumbnail(
+        filters.ThumbnailFilter(
             models.ImageUrl, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
         )
     ]
