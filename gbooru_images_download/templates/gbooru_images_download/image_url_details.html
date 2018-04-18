@@ -14,27 +14,30 @@
         </td>
       </tr>
       {% for key, value in match_result.__dict__.items() %}
-        {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
-        {% elif key == 'thumbnail_url' %}
+        {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id' 'img_url'] %}
+        {% elif key == 'img_url' %}
+        {% else %}
           <tr>
             <th>{{key|replace('_', ' ')}}</th>
             <td>
-              <figure>
-                <a href="{{match_result.thumbnail_url.url}}">
-                  <img src="{{match_result.thumbnail_url.url}}">
-                </a>
-                <figcaption>
-                  id:{{match_result.thumbnail_url.id}}
-                  width:{{match_result.thumbnail_url.width}}
-                  height:{{match_result.thumbnail_url.height}}
-                  <br/>
-                  <a href="{{match_result.thumbnail_url.url}}"> {{match_result.thumbnail_url.url}} </a>
-                </figcaption>
-              </figure>
+              {% if key == 'thumbnail_url' %}
+                <figure>
+                  <a href="{{match_result.thumbnail_url.url}}">
+                    <img src="{{match_result.thumbnail_url.url}}">
+                  </a>
+                  <figcaption>
+                    id:{{match_result.thumbnail_url.id}}
+                    width:{{match_result.thumbnail_url.width}}
+                    height:{{match_result.thumbnail_url.height}}
+                    <br/>
+                    <a href="{{match_result.thumbnail_url.url}}"> {{match_result.thumbnail_url.url}} </a>
+                  </figcaption>
+                </figure>
+              {% else %}
+                {{value}}
+              {% endif %}
             </td>
           </tr>
-        {% else %}
-          <tr><th>{{key|replace('_', ' ')}}</th><td>{{value}}</td></tr>
         {% endif %}
       {% endfor %}
     </table>
@@ -59,3 +62,4 @@
   </table>
 </div>
 {% endblock %}
+
