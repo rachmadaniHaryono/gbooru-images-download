@@ -5,13 +5,12 @@ import textwrap
 from flask import request, url_for
 from flask_admin import AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
-from flask_admin.contrib.sqla.filters import BaseSQLAFilter
 from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup
 import humanize
 import structlog
 
-from gbooru_images_download import forms, models, api
+from . import forms, models, api, filters
 
 
 log = structlog.getLogger(__name__)
@@ -93,37 +92,6 @@ class SearchQueryView(CustomModelView):
     column_filters = ('page', 'search_term.value')
 
 
-class FilterMatchResultSearchQuery(BaseSQLAFilter):
-    def apply(self, query, value, alias=None):
-        res = query.filter(
-            self.column.search_queries.contains(models.SearchQuery.query.get(value)))
-        return res
-
-    def operation(self):
-        return 'equal'
-
-    def get_options(self, view):
-        return [
-            (str(x.id), "'{}' page:{}".format(x.search_term.value, x.page))
-            for x in models.SearchQuery.query.all()
-        ]
-
-
-class FilterMatchResultFilteredUrl(BaseSQLAFilter):
-    def apply(self, query, value, alias=None):
-        # __import__('pdb').set_trace()
-        furl_res = query.join('img_url').filter(models.ImageUrl.filtered)
-        if value == '1':
-            res = furl_res
-        else:
-            res = query.filter(
-                models.MatchResult.id.notin_([x.id for x in furl_res.all() if hasattr(x, 'id')]))
-        return res
-
-    def operation(self):
-        return 'in filter list'
-
-
 class MatchResultView(CustomModelView):
     """Custom view for MatchResult model."""
 
@@ -160,8 +128,8 @@ class MatchResultView(CustomModelView):
         'h': lambda v, c, m, p: m.img_url.height,
     }
     column_filters = [
-        FilterMatchResultSearchQuery(column=models.MatchResult, name='search query'),
-        FilterMatchResultFilteredUrl(
+        filters.MatchResultSearchQueryFilter(column=models.MatchResult, name='search query'),
+        filters.MatchResultFilteredUrlFilter(
             column=models.MatchResult, name='url filtered',
             options=(('1', 'yes'), ('0', 'no'))
         )
