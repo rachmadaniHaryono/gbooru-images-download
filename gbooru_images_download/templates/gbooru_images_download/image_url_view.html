@@ -35,9 +35,9 @@
   {% endfor %}
   </table>
 </div>
+<div>
 <h3>Match results</h3>
-
-{% for match_result in entry.match_results %}
+{% for match_result in model.match_results %}
   <table class="table table-condensed table-bordered">
     <tr><th>ID</th>
       <td>
@@ -49,11 +49,21 @@
     </tr>
     {% for key, value in match_result.__dict__.items() %}
       {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
+      {% elif key == 'thumbnail_url' %}
+        <tr>
+          <th>{{key|replace('_', ' ')}}</th>
+          <td>
+            <a href="{{match_result.thumbnail_url.url}}">
+              <img src="{{match_result.thumbnail_url.url}}">
+            </a>
+          </td>
+        </tr>
       {% else %}
         <tr><th>{{key|replace('_', ' ')}}</th><td>{{value}}</td></tr>
       {% endif %}
     {% endfor %}
   </table>
+</div>
 {% endfor %}
 
 {% endif %}

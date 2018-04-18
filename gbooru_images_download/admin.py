@@ -8,7 +8,6 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.filters import BaseSQLAFilter
 from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup
-from sqlalchemy.sql import not_
 import humanize
 import structlog
 
@@ -88,7 +87,9 @@ class SearchQueryView(CustomModelView):
             m.page
         )),
     }
+    column_list = ('created_at', 'search_term', 'page')
     column_searchable_list = ('page', 'search_term.value')
+    column_sortable_list = ('created_at', ('search_term', 'search_term.value'), 'page')
     column_filters = ('page', 'search_term.value')
 
 
@@ -128,10 +129,16 @@ class MatchResultView(CustomModelView):
 
     @staticmethod
     def format_entry(m):
-        templ = '<a href="{1}"><img src="{0}"></a>'
-        if m.img_url:
-            return Markup(templ.format(m.thumbnail_url.url, m.img_url.url))
-        return Markup(templ.format(m.thumbnail_url.url, m.thumbnail_url.url))
+        figcaption_templ = """
+        <a class="icon btn btn-default btn-xs" href="{}">
+        <span class="fa fa-eye glyphicon glyphicon-eye-open"></span>
+        image url
+        </a>"""
+        templ = '<figure><a href="{1}"><img src="{0}"></a><figcaption>{2}</figcaption></figure>'
+        field = m.img_url if m.img_url else m.thumbnail_url
+        figcaption = figcaption_templ.format(
+            url_for('imageurl.details_view', id=field.id, url=url_for('matchresult.index_view')))
+        return Markup(templ.format(m.thumbnail_url.url, field.url, figcaption))
 
     @staticmethod
     def format_img_url(m, p):
@@ -149,6 +156,8 @@ class MatchResultView(CustomModelView):
         'Entry': lambda v, c, m, p: MatchResultView.format_entry(m),
         'img_url': lambda v, c, m, p: MatchResultView.format_img_url(m, p),
         'thumbnail_url': lambda v, c, m, p: MatchResultView.format_img_url(m, p),
+        'w': lambda v, c, m, p: m.img_url.width,
+        'h': lambda v, c, m, p: m.img_url.height,
     }
     column_filters = [
         FilterMatchResultSearchQuery(column=models.MatchResult, name='search query'),
@@ -157,7 +166,8 @@ class MatchResultView(CustomModelView):
             options=(('1', 'yes'), ('0', 'no'))
         )
     ]
-    column_list = ('created_at', 'Entry')
+    column_list = ('created_at', 'w', 'h', 'Entry')
+    column_sortable_list = ('created_at', ('w', 'img_url.width'), ('h', 'img_url.height'))
     can_view_details = True
     page_size = 100
 
@@ -189,34 +199,19 @@ class FilterThumbnail(BaseSQLAFilter):
 class ImageUrlView(CustomModelView):
     """Custom view for ImageURL model."""
 
-    def _url_formatter(view, context, model, name):
-        match_results = model.match_results
+    def _url_formatter(self, context, model, name):
+        data = getattr(model, name)
         templ = """
-        <figure>
-        <a href="{3}"><img src="{1}"></a>
-        <figcaption><a href="{0}">{2}</figcaption>
-        <figure>"""
-        img_view_url = url_for('u.index', u=model.url)
-        if match_results:
-            first_match_result = next(iter(match_results or []), None)
-            shorted_url = '<br>'.join(textwrap.wrap(model.url))
-            return Markup(
-                templ.format(
-                    model.url,
-                    first_match_result.thumbnail_url.url,
-                    shorted_url,
-                    img_view_url
-                )
-            )
-        shorted_url = '<br>'.join(textwrap.wrap(model.url))
-        return Markup(templ.format(model.url, model.url, shorted_url, img_view_url))
+        <a href="{0}">{0}</a><br/>
+        <a href="{0}">[link]</a>
+        """
+        return Markup(templ.format(data))
 
     column_searchable_list = ('url', 'width', 'height')
     column_filters = ('width', 'height')
     column_formatters = {'created_at': date_formatter, 'url': _url_formatter, }
-    # form_ajax_refs = {'tags': {'fields': ['namespace', 'name'], 'page_size': 10}}
     inline_models = (models.Tag, models.FilteredImageUrl,)
-
+    details_template = 'gbooru_images_download/image_url_details.html'
     column_filters = [
         'width',
         'height',

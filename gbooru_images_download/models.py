@@ -33,7 +33,7 @@ match_result_json_data = db.Table(
 class Base(db.Model):
     __abstract__ = True
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(TIMESTAMP, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(TIMESTAMP, default=datetime.now, nullable=False)
 
 
 class SingleStringModel(Base):

@@ -1,19 +1,19 @@
 """Server module."""
 from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import unquote_plus
-import pprint
 import logging
 import os
 import shutil
 import tempfile
 
 from appdirs import user_data_dir
-from flask import Flask, request, flash, send_from_directory, jsonify
+from flask import Flask, request, flash, send_from_directory, jsonify, redirect, url_for
 from flask.cli import FlaskGroup
 from flask.views import View
 from flask_admin import Admin, BaseView, expose
 from flask_admin._compat import text_type
 from flask_admin.contrib.sqla import fields, ModelView
+from flask_debugtoolbar import DebugToolbarExtension
 from flask_migrate import Migrate
 from sqlalchemy.orm.util import identity_key
 import click
@@ -31,10 +31,9 @@ class ImageURLSingleView(BaseView):
     @expose('/')
     def index(self):
         """View for single image url."""
-        kwargs = {}
-        kwargs['search_url'] = request.args.get('u', None)
-        kwargs['entry'] = models.ImageUrl.query.filter_by(url=kwargs['search_url']).one_or_none()
-        return self.render('gbooru_images_download/image_url_view.html', **kwargs)
+        url = request.args.get('u', None)
+        entry = models.ImageUrl.query.filter_by(url=url).one_or_none()
+        return redirect(url_for('imageurl.details_view', id=entry.id))
 
 
 class FromFileSearchImageView(BaseView):
@@ -237,6 +236,7 @@ def create_app(script_info=None):
         return {'app': app, 'db': models.db}
 
     Migrate(app, models.db)
+    toolbar = DebugToolbarExtension()
     # flask-admin
     app_admin = Admin(
         app, name='Gbooru images download', template_mode='bootstrap3',
