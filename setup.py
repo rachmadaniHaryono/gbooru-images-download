@@ -15,6 +15,10 @@ test_deps = [
     'tox>=2.7.0',
     'vcrpy>=1.11.1',
 ]
+dev_deps = test_deps + [
+    'flask-shell-ipython>=0.3.0',
+    'Flask-DebugToolbar>=0.10.1',
+]
 
 setup(
     name='gbooru-images-download',
@@ -50,6 +54,7 @@ setup(
     tests_require=test_deps,
     extras_require={
         'test': test_deps,
+        'dev': dev_deps,
     },
     setup_requires=['pytest-runner'],
     classifiers=[
