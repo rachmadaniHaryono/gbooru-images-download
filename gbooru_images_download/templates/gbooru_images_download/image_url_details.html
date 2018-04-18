@@ -1,0 +1,61 @@
+{% extends 'admin/model/details.html' %}
+{% block details_table %}
+{{super()}}
+<div>
+  <h3>Match Result</h3>
+  {% for match_result in model.match_results %}
+    <table class="table table-condensed table-bordered">
+      <tr><th>ID</th>
+        <td>
+          <a href="{{url_for('matchresult.details_view', id=match_result.id)}}">{{match_result.id}}</a>
+          <a class="btn btn-default btn-xs" href="{{url_for('matchresult.edit_view', id=match_result.id)}}">
+            <span class="fa fa-search glyphicon glyphicon-pencil">edit</span>
+          </a>
+        </td>
+      </tr>
+      {% for key, value in match_result.__dict__.items() %}
+        {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id'] %}
+        {% elif key == 'thumbnail_url' %}
+          <tr>
+            <th>{{key|replace('_', ' ')}}</th>
+            <td>
+              <figure>
+                <a href="{{match_result.thumbnail_url.url}}">
+                  <img src="{{match_result.thumbnail_url.url}}">
+                </a>
+                <figcaption>
+                  id:{{match_result.thumbnail_url.id}}
+                  width:{{match_result.thumbnail_url.width}}
+                  height:{{match_result.thumbnail_url.height}}
+                  <br/>
+                  <a href="{{match_result.thumbnail_url.url}}"> {{match_result.thumbnail_url.url}} </a>
+                </figcaption>
+              </figure>
+            </td>
+          </tr>
+        {% else %}
+          <tr><th>{{key|replace('_', ' ')}}</th><td>{{value}}</td></tr>
+        {% endif %}
+      {% endfor %}
+    </table>
+  {% endfor %}
+</div>
+
+<div>
+  <h3>Tags</h3>
+  <table class="table table-condensed table-bordered">
+  {% for tag in model.get_sorted_tags() %}
+    {% if tag.namespace.hidden %}
+    {% elif tag.hidden %}
+    {% else %}
+    <tr>
+      <th>{{tag.namespace.value}}</th>
+      <td>
+        <a href ="#" class="{{tag.namespace.format_html_class() if tag.namespace}}"> {{tag.value}}</a>
+      </td>
+    </tr>
+    {% endif %}
+  {% endfor %}
+  </table>
+</div>
+{% endblock %}
