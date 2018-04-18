@@ -17,7 +17,6 @@ test_deps = [
 ]
 dev_deps = test_deps + [
     'flask-shell-ipython>=0.3.0',
-    'Flask-DebugToolbar>=0.10.1',
 ]
 
 setup(

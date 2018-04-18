@@ -13,7 +13,6 @@ from flask.views import View
 from flask_admin import Admin, BaseView, expose
 from flask_admin._compat import text_type
 from flask_admin.contrib.sqla import fields, ModelView
-from flask_debugtoolbar import DebugToolbarExtension
 from flask_migrate import Migrate
 from sqlalchemy.orm.util import identity_key
 import click
@@ -236,7 +235,6 @@ def create_app(script_info=None):
         return {'app': app, 'db': models.db}
 
     Migrate(app, models.db)
-    toolbar = DebugToolbarExtension()
     # flask-admin
     app_admin = Admin(
         app, name='Gbooru images download', template_mode='bootstrap3',
