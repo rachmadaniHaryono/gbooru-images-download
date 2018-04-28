@@ -192,7 +192,37 @@ class TagView(CustomModelView):
 class FilteredImageUrlView(CustomModelView):
     """Custom view for Tag model."""
 
-    column_formatters = {'created_at': date_formatter, }
+    can_edit = False
+    can_view_details = False
+    can_export = True
+    column_formatters = {
+        'created_at': date_formatter,
+        'img_url.id': lambda v, c, m, p:
+            Markup(
+                '<a href="{0}">{1}</a>'.format(
+                    url_for('imageurl.details_view', id=m.img_url.id),
+                    m.img_url.id,
+                )
+            ),
+        'img': lambda v, c, m, p:
+            Markup(
+                '<img style="{1}" '
+                'src="{0}">'.format(
+                    m.img_url.match_results[0].thumbnail_url.url,
+                    ' '.join([
+                        'max-width:100px;',
+                        'display: block;',
+                        'margin-left: auto;',
+                        'margin-right: auto;',
+                    ])
+                )
+            ),
+        'img_url': lambda v, c, m, p:
+            Markup('<a href="{0.url}">{0.url}</a>'.format(m.img_url,)),
+    }
+    column_labels = {'img_url.id': 'id', 'img_url.width': 'w', 'img_url.height': 'h'}
+    column_list = ('created_at', 'img_url.id', 'img', 'img_url', 'img_url.width', 'img_url.height')
+    column_sortable_list = ('created_at', 'img_url', 'img_url.width', 'img_url.height')
 
     def create_form(self):
         form = super().create_form()
