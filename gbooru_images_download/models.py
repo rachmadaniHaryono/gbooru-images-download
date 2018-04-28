@@ -118,7 +118,7 @@ class ImageUrl(Base):
 
 
 class FilteredImageUrl(Base):
-    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
+    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'), unique=True)
     img_url = db.relationship(
         'ImageUrl', foreign_keys='FilteredImageUrl.img_url_id', lazy='subquery',
         backref=db.backref('filtered', lazy=True, cascade='delete'))
