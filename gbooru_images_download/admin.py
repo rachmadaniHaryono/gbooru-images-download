@@ -170,14 +170,29 @@ class ImageUrlView(CustomModelView):
     def _url_formatter(self, context, model, name):
         data = getattr(model, name)
         templ = """
-        <a href="{0}">{0}</a><br/>
+        <span style="word-break:break-all;"><a href="{0}">{0}</a></span><br/>
         <a href="{0}">[link]</a>
         """
         return Markup(templ.format(data))
 
     column_searchable_list = ('url', 'width', 'height')
-    column_filters = ('width', 'height')
-    column_formatters = {'created_at': date_formatter, 'url': _url_formatter, }
+    column_list = ('created_at', 'thumbnail', 'url', 'width', 'height')
+    column_formatters = {
+        'created_at': date_formatter,
+        'url': _url_formatter,
+        'thumbnail':
+        lambda v, c, m, p:
+        Markup('<img style="{1}" src="{0}">'.format(
+            m.url if m.thumbnail_match_results else
+            m.match_results[0].thumbnail_url.url,
+            ' '.join([
+                'max-width:100px;',
+                'display: block;',
+                'margin-left: auto;',
+                'margin-right: auto;',
+            ])
+        )),
+    }
     inline_models = (models.Tag, models.FilteredImageUrl,)
     details_template = 'gbooru_images_download/image_url_details.html'
     column_filters = [
