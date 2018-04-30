@@ -338,7 +338,7 @@ def get_or_create_search_image(file_path=None, url=None, search_url=None, **kwar
             model, created = models.get_or_create(
                 session, models.SearchImage, search_url=search_url)
             if not img_url_m:
-                img_url_m = models.get_or_create(session, models.ImageUrl, url=url)
+                img_url_m = models.get_or_create(session, models.ImageUrl, url=url)[0]
             model.img_url = img_url_m
             model.search_url = search_url
         else:
