@@ -175,23 +175,29 @@ class ImageUrlView(CustomModelView):
         """
         return Markup(templ.format(data))
 
+    def _thumbnail_formatter(self, context, model, name):
+        thumbnail_url = None
+        if model.thumbnail_match_results:
+            thumbnail_url = model.url
+        elif model.match_results:
+            thumbnail_url = model.match_results[0].thumbnail_url.url
+        if thumbnail_url:
+            return Markup('<img style="{1}" src="{0}">'.format(
+                thumbnail_url,
+                ' '.join([
+                    'max-width:100px;',
+                    'display: block;',
+                    'margin-left: auto;',
+                    'margin-right: auto;',
+                ])
+            ))
+
     column_searchable_list = ('url', 'width', 'height')
     column_list = ('created_at', 'thumbnail', 'url', 'width', 'height')
     column_formatters = {
         'created_at': date_formatter,
         'url': _url_formatter,
-        'thumbnail':
-        lambda v, c, m, p:
-        Markup('<img style="{1}" src="{0}">'.format(
-            m.url if m.thumbnail_match_results else
-            m.match_results[0].thumbnail_url.url,
-            ' '.join([
-                'max-width:100px;',
-                'display: block;',
-                'margin-left: auto;',
-                'margin-right: auto;',
-            ])
-        )),
+        'thumbnail': _thumbnail_formatter
     }
     inline_models = (models.Tag, models.FilteredImageUrl,)
     details_template = 'gbooru_images_download/image_url_details.html'
