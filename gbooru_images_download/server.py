@@ -178,7 +178,7 @@ def create_app(script_info=None):
     file_handler.setFormatter(logging.Formatter('<%(asctime)s> <%(levelname)s> %(message)s'))
     app.logger.addHandler(file_handler)
     # reloader
-    reloader = app.config['TEMPLATES_AUTO_RELOAD'] = bool(os.getenv('REDDITDL_RELOADER')) or app.config['TEMPLATES_AUTO_RELOAD']  # NOQA
+    reloader = app.config['TEMPLATES_AUTO_RELOAD'] = bool(os.getenv('GID_RELOADER')) or app.config['TEMPLATES_AUTO_RELOAD']  # NOQA
     if reloader:
         app.jinja_env.auto_reload = True
     # app config
