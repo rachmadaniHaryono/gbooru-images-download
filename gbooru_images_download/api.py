@@ -8,6 +8,8 @@ import tempfile
 
 from bs4 import BeautifulSoup
 from PIL import Image
+from yapsy.IPlugin import IPlugin
+from yapsy.PluginManager import PluginManager
 import requests
 import structlog
 try:
@@ -18,7 +20,7 @@ except ImportError:
     SELENIUM_ENABLED = False
 
 import gbooru_images_download as gid
-from . import models, exceptions
+from . import models, exceptions, plugin
 
 log = structlog.getLogger(__name__)
 
@@ -146,13 +148,29 @@ def get_match_results(json_response=None, session=None):
 def get_or_create_search_query(query, page=1, disable_cache=False, session=None):
     """Get or create search_query."""
     session = models.db.session if session is None else session
+    mode = None
     search_term = models.get_or_create(session, models.SearchTerm, value=query)[0]
     with session.no_autoflush:
         model, created = models.get_or_create(
             session, models.SearchQuery, search_term=search_term, page=page)
     if created or disable_cache:
-        json_resp = get_json_response(query=query, page=page)
-        match_results = list(get_match_results(json_response=json_resp, session=session))
+        manager = PluginManager(plugin_info_ext='ini')
+        manager.setCategoriesFilter({
+            "parser": ParserPlugin,
+        })
+        manager.setPluginInfoExtension('ini')
+        manager.setPluginPlaces([plugin.__path__[0]])
+        manager.collectPlugins()
+        if mode == 'all':
+            pass
+            # plugs = manager.getAllPlugins()
+            # match_results = plugs
+            # match_results = sum(match_results, [])
+        else:
+            plug = manager.activatePluginByName('Google image', 'parser')
+            match_results = plug.get_match_results(search_term, page=page, session=session)
+        # json_resp = get_json_response(query=query, page=page)
+        # match_results = list(get_match_results(json_response=json_resp, session=session))
         namespace = models.get_or_create(session, models.Namespace, value='search query')[0]
         query_tag = models.get_or_create(session, models.Tag, namespace=namespace, value=query)[0]
         [x.img_url.tags.append(query_tag) for x in match_results if hasattr(x, 'img_url')]
@@ -551,3 +569,11 @@ def create_thumbnail(file_path, thumbnail_folder):
         if not os.path.isfile(thumbnail_path):
             shutil.copyfile(temp.name, thumbnail_path)
         return thumbnail_path
+
+
+class ParserPlugin(IPlugin):
+    """Base class for parser plugin."""
+
+    def get_match_results(self, search_term, page=1, session=None, **kwargs):
+        """main function used for plugin."""
+        pass
