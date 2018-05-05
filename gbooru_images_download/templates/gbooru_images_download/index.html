@@ -9,6 +9,7 @@
 {{super()}}
 <form method="GET" action="/">
   <div class="form-group"> {{ form.query.label }} {{ form.query(size=100, class_="form-control") }} </div>
+  <div class="form-group"> {{ form.mode.label }} {{ form.mode(class_="form-control")|safe}} </div>
   <div class="checkbox"> <label>{{form.disable_cache(type='checkbox')}}{{form.disable_cache.label}}</label></div>
   <button type="submit" class="btn btn-default">Submit</button>
 </form>

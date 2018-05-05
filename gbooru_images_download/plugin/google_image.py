@@ -2,7 +2,6 @@ from urllib.parse import urlparse, urlencode, parse_qs
 import json
 import requests
 
-from yapsy.IPlugin import IPlugin
 import structlog
 from bs4 import BeautifulSoup
 
