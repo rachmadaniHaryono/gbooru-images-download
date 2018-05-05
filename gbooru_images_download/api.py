@@ -8,7 +8,6 @@ import tempfile
 
 from bs4 import BeautifulSoup
 from PIL import Image
-from sqlalchemy.exc import OperationalError
 import requests
 import structlog
 try:
@@ -70,13 +69,13 @@ def get_data(html_tag):
         img_url_width = int(json_data['ow'])
         img_url_height = int(json_data['oh'])
     res['img_url'] = {
-        'url': url_from_img_url,
+        'value': url_from_img_url,
         'width': img_url_width,
         'height': img_url_height
     }
     # thumbnail url
     res['thumbnail_url'] = {
-        'url': json_data['tu'],
+        'value': json_data['tu'],
         'width': int(json_data['tw']),
         'height': int(json_data['th']),
     }
@@ -88,18 +87,16 @@ def get_or_create_image_url(dict_input, session=None):
 
     Example dict_input:
 
-        {'url': 'example.com/1.jpg', 'height': 100, 'width':100}
+        {'value': 'example.com/1.jpg', 'height': 100, 'width':100}
     """
     session = models.db.session if session is None else session
-    try:
-        m, created = models.get_or_create(session, models.ImageUrl, url=dict_input['url'])
-    except OperationalError as e:
-        with session.no_autoflush:
-            m, created = models.get_or_create(session, models.ImageUrl, url=dict_input['url'])
-    if dict_input['width']:
-        m.width = dict_input['width']
-    if dict_input['height']:
-        m.height = dict_input['height']
+    m, created = models.get_or_create(session, models.Url, value=dict_input['value'])
+    width = dict_input.get('width', None)
+    if width:
+        m.width = width
+    height = dict_input['height']
+    if height:
+        m.height = height
     session.add(m)
     return m, created
 
@@ -107,10 +104,14 @@ def get_or_create_image_url(dict_input, session=None):
 def get_or_create_match_result(data, session=None):
     """Get match result."""
     session = models.db.session if session is None else session
-    img_url = get_or_create_image_url(data['img_url'], session=session)[0]
-    thumbnail_url = get_or_create_image_url(data['thumbnail_url'], session=session)[0]
+    img_url = get_or_create_image_url(dict_input=data['img_url'], session=session)[0]
+    thumbnail_url = get_or_create_image_url(dict_input=data['thumbnail_url'], session=session)[0]
     model, created = models.get_or_create(
         session, models.MatchResult, img_url=img_url, thumbnail_url=thumbnail_url)
+    json_data_m = models.get_or_create(
+        session, models.JsonData, value=data['json_data'])[0]
+    if json_data_m not in model.json_data:
+        model.json_data.append(json_data_m)
     for nm_val, tag_val in data['tag']:
         if not str(tag_val):
             if (nm_val, tag_val) in (('s', ''), ('ity', '')):
@@ -123,9 +124,6 @@ def get_or_create_match_result(data, session=None):
             tag_kwargs['namespace'] = namespace
         tag = models.get_or_create(session, models.Tag, **tag_kwargs)[0]
         model.img_url.tags.append(tag)
-        json_data_m = models.get_or_create(
-            session, models.JsonData, value=data['json_data'])[0]
-        model.json_data.append(json_data_m)
     session.add(model)
     return model, created
 
@@ -141,7 +139,8 @@ def get_match_results(json_response=None, session=None):
             model = get_or_create_match_result(session=session, data=data)[0]
             session.add(model)
             yield model
-    yield
+    else:
+        yield
 
 
 def get_or_create_search_query(query, page=1, disable_cache=False, session=None):

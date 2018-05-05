@@ -34,10 +34,10 @@ class ImageURLSingleView(BaseView):
     def index(self):
         """View for single image url."""
         url = request.args.get('u', None)
-        entry = models.ImageUrl.query.filter_by(url=url).one_or_none()
+        entry = models.Url.query.filter_by(value=url).one_or_none()
         if not entry:
             return self.render('gbooru_images_download/image_url_view.html', entry=None)
-        return redirect(url_for('imageurl.details_view', id=entry.id))
+        return redirect(url_for('url.details_view', id=entry.id))
 
 
 class FromFileSearchImageView(BaseView):
@@ -255,7 +255,7 @@ def create_app(script_info=None):
     app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
-    app_admin.add_view(admin.ImageUrlView(models.ImageUrl, models.db.session, category='History', name='Image URL'))  # NOQA
+    app_admin.add_view(admin.UrlView(models.Url, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     # app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
     # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA

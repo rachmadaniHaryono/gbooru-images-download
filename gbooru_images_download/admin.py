@@ -88,7 +88,7 @@ class SearchQueryView(CustomModelView):
         'thumbnail':
         lambda v, c, m, p:
         Markup('<img style="{1}" src="{0}">'.format(
-            m.match_results[0].thumbnail_url.url,
+            m.match_results[0].thumbnail_url.value,
             ' '.join([
                 'max-width:100px;',
                 'display: block;',
@@ -116,18 +116,18 @@ class MatchResultView(CustomModelView):
         templ = '<figure><a href="{1}"><img src="{0}"></a><figcaption>{2}</figcaption></figure>'
         field = m.img_url if m.img_url else m.thumbnail_url
         figcaption = figcaption_templ.format(
-            url_for('imageurl.details_view', id=field.id, url=url_for('matchresult.index_view')))
-        return Markup(templ.format(m.thumbnail_url.url, field.url, figcaption))
+            url_for('url.details_view', id=field.id, url=url_for('matchresult.index_view')))
+        return Markup(templ.format(m.thumbnail_url.value, field.value, figcaption))
 
     @staticmethod
     def format_img_url(m, p):
         data = getattr(m, p)
         return Markup("""
             <a href={1}>ID:{0.id}, size:{0.width}x{0.height}</a><br/>
-            <a href="{0.url}">{0.url}</a>
+            <a href="{0.value}">{0.value}</a>
             """.format(
             data,
-            url_for('imageurl.details_view', id=data.id),
+            url_for('url.details_view', id=data.id),
         ))
 
     column_formatters = {
@@ -146,7 +146,8 @@ class MatchResultView(CustomModelView):
         )
     ]
     column_list = ('created_at', 'w', 'h', 'Entry')
-    column_sortable_list = ('created_at', ('w', 'img_url.width'), ('h', 'img_url.height'))
+    column_sortable_list = (
+        'created_at', ('w', 'img_url.width'), ('h', 'img_url.height'))
     can_view_details = True
     page_size = 100
 
@@ -164,7 +165,7 @@ class JsonDataView(CustomModelView):
     column_formatters = {'created_at': date_formatter, 'value': _value_formatter, }
 
 
-class ImageUrlView(CustomModelView):
+class UrlView(CustomModelView):
     """Custom view for ImageURL model."""
 
     def _url_formatter(self, context, model, name):
@@ -178,9 +179,9 @@ class ImageUrlView(CustomModelView):
     def _thumbnail_formatter(self, context, model, name):
         thumbnail_url = None
         if model.thumbnail_match_results:
-            thumbnail_url = model.url
+            thumbnail_url = model.value
         elif model.match_results:
-            thumbnail_url = model.match_results[0].thumbnail_url.url
+            thumbnail_url = model.match_results[0].thumbnail_url.value
         if thumbnail_url:
             return Markup('<img style="{1}" src="{0}">'.format(
                 thumbnail_url,
@@ -192,20 +193,20 @@ class ImageUrlView(CustomModelView):
                 ])
             ))
 
-    column_searchable_list = ('url', 'width', 'height')
-    column_list = ('created_at', 'thumbnail', 'url', 'width', 'height')
+    column_searchable_list = ('value', 'width', 'height')
+    column_list = ('created_at', 'thumbnail', 'value', 'width', 'height')
     column_formatters = {
         'created_at': date_formatter,
-        'url': _url_formatter,
+        'value': _url_formatter,
         'thumbnail': _thumbnail_formatter
     }
-    inline_models = (models.Tag, models.FilteredImageUrl,)
+    inline_models = (models.FilteredImageUrl,)
     details_template = 'gbooru_images_download/image_url_details.html'
     column_filters = [
         'width',
         'height',
         filters.ThumbnailFilter(
-            models.ImageUrl, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
+            models.Url, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
         )
     ]
 
@@ -216,7 +217,7 @@ class TagView(CustomModelView):
     column_filters = ('value', 'namespace.value')
     column_formatters = {
         'created_at': date_formatter,
-        'urls': lambda v, c, m, p: len(m.image_urls),
+        'urls': lambda v, c, m, p: len(m.urls),
         'value': lambda v, c, m, p: Markup(
             '<span style="word-break:break-all;">{}</span>'.format(m.value)
         )
@@ -238,7 +239,7 @@ class FilteredImageUrlView(CustomModelView):
         'img_url.id': lambda v, c, m, p:
             Markup(
                 '<a href="{0}">{1}</a>'.format(
-                    url_for('imageurl.details_view', id=m.img_url.id),
+                    url_for('url.details_view', id=m.img_url.id),
                     m.img_url.id,
                 )
             ),
@@ -246,7 +247,7 @@ class FilteredImageUrlView(CustomModelView):
             Markup(
                 '<img style="{1}" '
                 'src="{0}">'.format(
-                    m.img_url.match_results[0].thumbnail_url.url,
+                    m.img_url.match_results[0].thumbnail_url.value,
                     ' '.join([
                         'max-width:100px;',
                         'display: block;',
@@ -256,7 +257,7 @@ class FilteredImageUrlView(CustomModelView):
                 )
             ),
         'img_url': lambda v, c, m, p:
-            Markup('<a href="{0.url}">{0.url}</a>'.format(m.img_url,)),
+            Markup('<a href="{0.value}">{0.value}</a>'.format(m.img_url,)),
     }
     column_labels = {'img_url.id': 'id', 'img_url.width': 'w', 'img_url.height': 'h'}
     column_list = ('created_at', 'img_url.id', 'img', 'img_url', 'img_url.width', 'img_url.height')
@@ -264,9 +265,9 @@ class FilteredImageUrlView(CustomModelView):
 
     def create_form(self):
         form = super().create_form()
-        ImageUrl = models.ImageUrl
         if ('img_id') in request.args.keys():
-            img_url_m = self.session.query(ImageUrl).filter(ImageUrl.id == request.args['img_id']).one()  # NOQA
+            img_url_m = self.session.query(
+                models.ImageUrl).filter(models.Url.id == request.args['img_id']).one()  # NOQA
             form.img_url.data = img_url_m
         return form
 
@@ -337,7 +338,7 @@ class SearchImageView(CustomModelView):
         'img_guess': _img_guess_formatter,
         'img_url':
             lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(
-                m.img_url.url,
+                m.img_url.value,
             ) if m.img_url else ''),
         'search_url':
             lambda v, c, m, p: Markup('<a href="{1}">{0}</a>'.format(

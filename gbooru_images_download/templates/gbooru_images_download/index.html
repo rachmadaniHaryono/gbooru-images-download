@@ -23,15 +23,17 @@
   {% for match_result in match_results %}
   <div class="grid-item col-xs-6 col-md-3" sytle="">
   <figure id="mr{{match_result.id}}">
-    <a class="thumb" href="{{url_for('u.index', u=match_result.img_url.url)}}">
-      <img class="img-responsive" src="{{match_result.thumbnail_url.url}}">
+    <a class="thumb" href="{{url_for('u.index', u=match_result.img_url.value)}}">
+      <img class="img-responsive" src="{{match_result.thumbnail_url.value}}">
     </a>
     <figcaption>
-      <a class="btn btn-default btn-md" href="{{match_result.img_url.url}}">{{match_result.img_url.width}}x{{match_result.img_url.height}}</a>
+      <a class="btn btn-default btn-md"
+        href="{{match_result.value}}">{{match_result.img_url.width}}x{{match_result.img_url.height}}</a>
       <a class="btn btn-default btn-md" href="{{url_for('f.index', url=match_result.img_url.url, search_type=1)}}">
         <span class="fa fa-search glyphicon glyphicon-search"></span> similar
       </a>
-      <a class="btn btn-default btn-md" href="{{url_for('f.index', url=match_result.img_url.url, search_type=2)}}">
+      <a class="btn btn-default btn-md" href="{{url_for('f.index',
+        url=match_result.img_url.value, search_type=2)}}">
         <span class="fa fa-search glyphicon glyphicon-search"></span> size
       </a>
       <button class="btn btn-default hide-btn btn-md" type="button" data-id="{{match_result.img_url.id}}"
