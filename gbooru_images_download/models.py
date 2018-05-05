@@ -4,7 +4,6 @@ from datetime import datetime
 import os
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
@@ -14,9 +13,9 @@ import structlog
 log = structlog.getLogger(__name__)
 db = SQLAlchemy()
 
-image_url_tags = db.Table(
-    'image_url_tags',
-    db.Column('image_url_id', db.Integer, db.ForeignKey('image_url.id'), primary_key=True),
+url_tags = db.Table(
+    'url_tags',
+    db.Column('url_id', db.Integer, db.ForeignKey('url.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True))
 search_image_match_results = db.Table(
     'search_image_match_results',
@@ -43,7 +42,36 @@ class SingleStringModel(Base):
     value = db.Column(db.String)
 
 
+class Url(Base):
+    value = db.Column(URLType, unique=True, nullable=False)
+    tags = db.relationship(
+        'Tag', secondary=url_tags, lazy='subquery',
+        backref=db.backref('urls', lazy=True))
+    width = db.Column(db.Integer)
+    height = db.Column(db.Integer)
+
+    def get_sorted_tags(self):
+        nnm_t, nm_t = [], []
+        for tag in self.tags:
+            (nnm_t, nm_t)[bool(tag.namespace)].append(tag)
+        res = sorted(nm_t, key=lambda x: x.namespace.value)
+        res.extend(sorted(nnm_t, key=lambda x: x.value))
+        return res
+
+    def filename(self):
+        url = str(self.value)
+        if self.value.host == 'images-blogger-opensocial.googleusercontent.com' \
+                and str(self.value.path) == '/gadgets/proxy' \
+                and 'url' in self.value.query.params:
+            url = self.value.query.params['url']
+        return os.path.splitext(os.path.basename(url))[0]
+
+
 class SearchTerm(SingleStringModel):
+    url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
+    url = db.relationship(
+        'Url', lazy='subquery',
+        backref=db.backref('search_term', lazy=True))
 
     def __repr__(self):
         templ = '<SearchTerm:{0.id} {0.value}>'
@@ -72,13 +100,13 @@ class MatchResult(Base):
         'JsonData', secondary=match_result_json_data, lazy='subquery',
         backref=db.backref('match_results', lazy=True))
     # image and thumbnail
-    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
+    img_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
     img_url = db.relationship(
-        'ImageUrl', foreign_keys='MatchResult.img_url_id', lazy='subquery',
+        'Url', foreign_keys='MatchResult.img_url_id', lazy='subquery',
         backref=db.backref('match_results', lazy=True, cascade='delete'))
-    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
+    thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
     thumbnail_url = relationship(
-        'ImageUrl', foreign_keys='MatchResult.thumbnail_url_id', lazy='subquery',
+        'Url', foreign_keys='MatchResult.thumbnail_url_id', lazy='subquery',
         backref=db.backref('thumbnail_match_results', lazy=True, cascade='delete'))
 
 
@@ -86,41 +114,10 @@ class JsonData(Base):
     value = db.Column(JSONType)
 
 
-class ImageUrl(Base):
-    """Image Url."""
-    url = db.Column(URLType)
-    width = db.Column(db.Integer)
-    height = db.Column(db.Integer)
-    tags = db.relationship(
-        'Tag', secondary=image_url_tags, lazy='subquery',
-        backref=db.backref('image_urls', lazy=True))
-
-    def get_sorted_tags(self):
-        nnm_t, nm_t = [], []
-        for tag in self.tags:
-            (nnm_t, nm_t)[bool(tag.namespace)].append(tag)
-        res = sorted(nm_t, key=lambda x: x.namespace.value)
-        res.extend(sorted(nnm_t, key=lambda x: x.value))
-        return res
-
-    @hybrid_property
-    def filename(self):
-        url = str(self.url)
-        if self.url.host == 'images-blogger-opensocial.googleusercontent.com' \
-                and str(self.url.path) == '/gadgets/proxy' \
-                and 'url' in self.url.query.params:
-            url = self.url.query.params['url']
-        return os.path.splitext(os.path.basename(url))[0]
-
-    def __repr__(self):
-        templ = '<ImageUrl:{0.id} url:{0.url} w:{0.width} h:{0.height}>'
-        return templ.format(self)
-
-
 class FilteredImageUrl(Base):
-    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'), unique=True)
+    img_url_id = db.Column(db.Integer, db.ForeignKey('url.id'), unique=True)
     img_url = db.relationship(
-        'ImageUrl', foreign_keys='FilteredImageUrl.img_url_id', lazy='subquery',
+        'Url', foreign_keys='FilteredImageUrl.img_url_id', lazy='subquery',
         backref=db.backref('filtered', lazy=True, cascade='delete'))
 
 
@@ -174,9 +171,9 @@ class HiddenTag(Base):
 class SearchImage(Base):
     """Search image"""
     img_checksum = db.Column(db.String)
-    img_url_id = db.Column(db.Integer, db.ForeignKey('image_url.id'))
+    img_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
     img_url = db.relationship(
-        'ImageUrl', lazy='subquery',
+        'Url', lazy='subquery',
         backref=db.backref('search_image', lazy=True))
     # url result
     search_url = db.Column(URLType)
