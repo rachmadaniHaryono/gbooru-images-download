@@ -154,6 +154,9 @@ class MatchResultView(CustomModelView):
 
 class JsonDataView(CustomModelView):
     """Custom view for json data model"""
+
+    can_view_details = True
+
     def _value_formatter(view, context, model, name):
         res = ''
         for key, value in model.value.items():

@@ -14,8 +14,17 @@
         </td>
       </tr>
       {% for key, value in match_result.__dict__.items() %}
-        {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'json_data_id', 'search_query_id' 'img_url'] %}
+        {% if key in ['_sa_instance_state', 'id', 'thumbnail_url_id', 'img_url_id', 'search_query_id' 'img_url'] %}
         {% elif key == 'img_url' %}
+        {% elif key == 'json_data' %}
+          <tr>
+            <th>json data</th>
+            <td>
+            {% for sub_value in value %}
+              <a href="{{url_for('jsondata.details_view', id=sub_value.id)}}">{{sub_value}}</a> 
+            {% endfor %}
+            </td>
+          </tr>
         {% else %}
           <tr>
             <th>{{key|replace('_', ' ')}}</th>
