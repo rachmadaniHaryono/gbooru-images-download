@@ -1,4 +1,7 @@
 """Test for api module."""
+import logging
+import json
+
 from bs4 import BeautifulSoup
 from PIL import Image
 import pytest
@@ -6,6 +9,10 @@ import requests
 import vcr
 
 from gbooru_images_download import api, models
+
+logging.basicConfig()
+vcr_log = logging.getLogger("vcr")
+vcr_log.setLevel(logging.INFO)
 
 
 @pytest.fixture()
@@ -29,8 +36,23 @@ def tmp_pic(tmpdir):
 def test_get_or_create_search_query(tmp_db):
     """test method."""
     res = api.get_or_create_search_query('red picture')[0]
+    tmp_db.session.add(res)
+    tmp_db.session.commit()
+    json_items = []
+    non_json_items = []
+    logging.debug('created at {}'.format(res.created_at))
+    res_vars = vars(res)
+    for key, value in res_vars.items():
+        try:
+            json.dumps(value)
+            json_items.append((key, value))
+        except TypeError:
+            non_json_items.append((key, value))
+    assert set(json_items) == set(
+        [('page', 1), ('search_term_id', 1), ('id', 1)])
+    assert list(zip(*non_json_items))[0] == ('_sa_instance_state', 'created_at')
     assert res
-    assert all([x.img_url for x in res.match_results])
+    assert len(res.match_results) > 0
 
 
 @pytest.mark.no_travis
