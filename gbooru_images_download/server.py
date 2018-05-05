@@ -7,7 +7,7 @@ import shutil
 import tempfile
 
 from appdirs import user_data_dir
-from flask import Flask, request, flash, send_from_directory, jsonify, redirect, url_for
+from flask import Flask, request, flash, jsonify, redirect, url_for
 from flask.cli import FlaskGroup
 from flask.views import View
 from flask_admin import Admin, BaseView, expose
@@ -17,8 +17,11 @@ from flask_migrate import Migrate
 from sqlalchemy.orm.util import identity_key
 import click
 import structlog
+# api for later
+# from flask_restful import Api, Resource
+# from flasgger import Swagger
 
-from gbooru_images_download import models, admin, api, sha256
+from gbooru_images_download import models, admin, api
 from gbooru_images_download.forms import FindImageForm
 
 
@@ -237,6 +240,12 @@ def create_app(script_info=None):
         return {'app': app, 'db': models.db}
 
     Migrate(app, models.db)
+
+    # api
+    # api = Api(app)
+    # Swagger(app)
+    # api.add_resource(resources.HydrusResource, '/hydrus/<string:search_query_id>')
+
     # flask-admin
     app_admin = Admin(
         app, name='Gbooru images download', template_mode='bootstrap3',
@@ -248,9 +257,9 @@ def create_app(script_info=None):
     app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
     app_admin.add_view(admin.ImageUrlView(models.ImageUrl, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
-    app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
+    # app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
+    # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
+    # app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.FilteredImageUrlView(models.FilteredImageUrl, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
@@ -258,46 +267,15 @@ def create_app(script_info=None):
     app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
 
     # routing
-    app.add_url_rule('/t/<path:filename>', 'thumbnail', lambda filename:send_from_directory(models.DEFAULT_THUMB_FOLDER, filename))  # NOQA
-    thread_json_view = ThreadJsonView.as_view("thread_json")
-    app.add_url_rule('/tj/<path:search_query>', view_func=thread_json_view)
-    app.add_url_rule('/tj/<path:search_query>/<int:page>', view_func=thread_json_view)
+    # app.add_url_rule('/tj/<path:search_query>', view_func=thread_json_view)
+    # app.add_url_rule('/tj/<path:search_query>/<int:page>', view_func=thread_json_view)
     return app
 
 
 @click.group(cls=FlaskGroup, create_app=create_app)
 def cli():
-    """This is a management script for application."""
+    """This is a script for application."""
     pass
-
-
-@cli.command()
-def check_thumbnails():
-    """Check thumbnails."""
-    create_app()
-    # get all thumbnail files and checksum
-    def_thumb_folder = os.path.join(user_data_dir('gbooru_images_download', 'hardikvasa'), 'thumb')  # NOQA
-    thumb_folder = def_thumb_folder
-    listdir_res = [
-        {'basename': x, 'path': os.path.join(thumb_folder, x)}
-        for x in os.listdir(def_thumb_folder)
-        if os.path.isfile(os.path.join(thumb_folder, x))
-    ]
-    filtered_ff = []
-    for item in listdir_res:
-        old_checksum = os.path.splitext(item['basename'])[0]
-        checksum = sha256.sha256_checksum(os.path.join(thumb_folder, item['basename']))
-        new_basename = checksum + '.jpg'
-        new_path = os.path.join(thumb_folder, new_basename)
-        if checksum != old_checksum:
-            # move thumbnail
-            shutil.move(item['path'], new_path)
-            log.info('Move thumbnail', src=old_checksum, dst=checksum)
-        filtered_ff.append({'basename': new_basename, 'path': new_path, 'checksum': checksum})
-
-    new_model_sets = [api.get_or_create_image_file_with_thumbnail(x['path']) for x in filtered_ff]
-    models.db.session.add_all([x[0] for x in new_model_sets])
-    models.db.session.commit()
 
 
 if __name__ == '__main__':
