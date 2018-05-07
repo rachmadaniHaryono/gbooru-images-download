@@ -2,20 +2,12 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Optional
-from yapsy.PluginManager import PluginManager
 
-
-from gbooru_images_download import models, plugin, api
+from gbooru_images_download import models, api
 
 
 def get_parser_choices():
-    manager = PluginManager(plugin_info_ext='ini')
-    manager.setCategoriesFilter({
-        "parser": api.ParserPlugin,
-    })
-    manager.setPluginInfoExtension('ini')
-    manager.setPluginPlaces([plugin.__path__[0]])
-    manager.collectPlugins()
+    manager = api.get_plugin_manager()
     plugins = manager.getAllPlugins()
     res = [('all', 'all: get images from all parser'), ]
     for pg in plugins:

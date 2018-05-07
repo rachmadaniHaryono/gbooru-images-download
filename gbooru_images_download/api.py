@@ -34,6 +34,16 @@ def sha256_checksum(filename, block_size=65536):
     return sha256.hexdigest()
 
 
+def get_plugin_manager():
+    manager = PluginManager(plugin_info_ext='ini')
+    manager.setCategoriesFilter({
+        "parser": ParserPlugin,
+    })
+    manager.setPluginPlaces([plugin.__path__[0]])
+    manager.collectPlugins()
+    return manager
+
+
 def get_json_response(query, page=1):
     url_page = page - 1
     url_query = {
@@ -152,13 +162,7 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
         model, created = models.get_or_create(
             session, models.SearchQuery, search_term=search_term, page=page)
     if created or disable_cache:
-        manager = PluginManager(plugin_info_ext='ini')
-        manager.setCategoriesFilter({
-            "parser": ParserPlugin,
-        })
-        manager.setPluginInfoExtension('ini')
-        manager.setPluginPlaces([plugin.__path__[0]])
-        manager.collectPlugins()
+        manager = get_plugin_manager()
         if mode == 'all':
             pass
             # plugs = manager.getAllPlugins()
