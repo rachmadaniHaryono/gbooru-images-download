@@ -93,12 +93,10 @@ def get_or_create_image_url(dict_input, session=None):
     """
     session = models.db.session if session is None else session
     m, created = models.get_or_create(session, models.Url, value=dict_input['value'])
-    width = dict_input.get('width', None)
-    if width:
-        m.width = width
-    height = dict_input['height']
-    if height:
-        m.height = height
+    for item in ('width', 'height'):
+        value = dict_input.get(item, None)
+        if value:
+            setattr(m, item, value)
     session.add(m)
     return m, created
 
