@@ -64,7 +64,7 @@
     <tr>
       <th>{{tag.namespace.value}}</th>
       <td>
-        <a href ="#" class="{{tag.namespace.format_html_class() if tag.namespace}}"> {{tag.value}}</a>
+        <a href ="#" class="{{tag.get_html_class()}}"> {{tag.value}}</a>
       </td>
     </tr>
     {% endif %}

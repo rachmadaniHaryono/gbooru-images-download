@@ -210,34 +210,17 @@ def create_app(script_info=None):
     if not database_exist:
         session = models.db.session
         hidden_nms = [
-            'cb', 'cl', 'cr', 'ct', 'id', 'imgres url', 'msm', 'msu', 'rt', 'rh'
-            'si', 'sm', 'th', 'tu', 'tw',
+            'imgres url', 'msu', 'si', 'isu', 'rh'
         ]
         for nm in hidden_nms:
             nm_m = models.get_or_create(session, models.Namespace, value=nm)[0]
             hnm = models.get_or_create(session, models.HiddenNamespace, namespace=nm_m)[0]
             session.add(hnm)
-        nms_class_dict = {
-            'imgref url': 'tag-page-url',
-            'isu': 'tag-site',
-            'page url': 'tag-page-url',
-            'pt': 'tag-picture-title',
-            'ru': 'tag-page-url',
-            's': 'tag-picture-subtitle',
-            'search query': 'tag-query',
-            'st': 'tag-site-title',
-            'title': 'tag-picture-title',
-        }
-        for nm, cl in nms_class_dict.items():
-            nm_m = models.get_or_create(session, models.Namespace, value=nm)[0]
-            nm_hc_m = models.get_or_create(
-                session, models.NamespaceHtmlClass, namespace=nm_m, value=cl)[0]
-            session.add(nm_hc_m)
         session.commit()
 
     @app.shell_context_processor
     def shell_context():
-        return {'app': app, 'db': models.db}
+        return {'app': app, 'db': models.db, 'models': models}
 
     Migrate(app, models.db)
 
@@ -255,7 +238,7 @@ def create_app(script_info=None):
     app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
-    app_admin.add_view(admin.UrlView(models.Url, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(admin.UrlView(models.Url, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     app_admin.add_view(ModelView(models.Namespace, models.db.session, category='History'))
     # app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA

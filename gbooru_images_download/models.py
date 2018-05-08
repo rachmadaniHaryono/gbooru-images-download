@@ -127,11 +127,6 @@ class Namespace(SingleStringModel):
     def __repr__(self):
         return '<Namespace:{0.id} {0.value}>'.format(self)
 
-    def format_html_class(self):
-        if self.html_class:
-            return ' '.join([x.value for x in self.html_class])
-        return ''
-
 
 class HiddenNamespace(Base):
     namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
@@ -159,6 +154,15 @@ class Tag(SingleStringModel):
     def as_string(self):
         nm = '{}:'.format(self.namespace.value) if self.namespace else ''
         return ''.join([nm, self.value])
+
+    def get_html_class(self):
+        if not self.namespace:
+            return
+        val = 'tag-' + self.namespace.value
+        val = val.replace(' ', '-')
+        if self.namespace.html_class:
+            return val + ' ' + ' '.join([x.value for x in self.html_class])
+        return val
 
     def __repr__(self):
         templ = '<Tag:{0.id} {0.as_string}>'

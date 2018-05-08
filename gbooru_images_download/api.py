@@ -38,6 +38,7 @@ def get_plugin_manager():
     manager = PluginManager(plugin_info_ext='ini')
     manager.setCategoriesFilter({
         "parser": ParserPlugin,
+        'tag_preprocessor': TagPreProcessor,
     })
     manager.setPluginPlaces([plugin.__path__[0]])
     manager.collectPlugins()
@@ -122,12 +123,10 @@ def get_or_create_match_result(data, session=None):
         session, models.JsonData, value=data['json_data'])[0]
     if json_data_m not in model.json_data:
         model.json_data.append(json_data_m)
+    manager = get_plugin_manager()
+    for plug in manager.getPluginsOfCategory('tag_preprocessor'):
+        data['tag'] = list(plug.plugin_object.run_tag_preprocessor(data['tag']))
     for nm_val, tag_val in data['tag']:
-        if not str(tag_val):
-            if (nm_val, tag_val) in (('s', ''), ('ity', '')):
-                continue
-            log.debug('tag value is false', namespace=nm_val, value=tag_val)
-            continue
         tag_kwargs = {'value': str(tag_val)}
         if nm_val:
             namespace = models.get_or_create(session, models.Namespace, value=nm_val)[0]
@@ -161,6 +160,7 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
     with session.no_autoflush:
         model, created = models.get_or_create(
             session, models.SearchQuery, search_term=search_term, page=page)
+
     if created or disable_cache:
         manager = get_plugin_manager()
         if mode == 'all':
@@ -173,7 +173,7 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
             match_results = plug.get_match_results(search_term, page=page, session=session)
         # json_resp = get_json_response(query=query, page=page)
         # match_results = list(get_match_results(json_response=json_resp, session=session))
-        namespace = models.get_or_create(session, models.Namespace, value='search query')[0]
+        namespace = models.get_or_create(session, models.Namespace, value='query')[0]
         query_tag = models.get_or_create(session, models.Tag, namespace=namespace, value=query)[0]
         [x.img_url.tags.append(query_tag) for x in match_results if hasattr(x, 'img_url')]
         model.match_results.extend(match_results)
@@ -578,4 +578,11 @@ class ParserPlugin(IPlugin):
 
     def get_match_results(self, search_term, page=1, session=None, **kwargs):
         """main function used for plugin."""
+        pass
+
+
+class TagPreProcessor(IPlugin):
+    """Base class for parser plugin."""
+
+    def run_tag_preprocessor(self, tags):
         pass

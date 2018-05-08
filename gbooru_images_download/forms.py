@@ -8,7 +8,7 @@ from gbooru_images_download import models, api
 
 def get_parser_choices():
     manager = api.get_plugin_manager()
-    plugins = manager.getAllPlugins()
+    plugins = manager.getPluginsOfCategory('parser')
     res = [('all', 'all: get images from all parser'), ]
     for pg in plugins:
         res.append((pg.name, '{0.name}: {0.description}'.format(pg)))
