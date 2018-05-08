@@ -173,10 +173,7 @@ class UrlView(CustomModelView):
 
     def _url_formatter(self, context, model, name):
         data = getattr(model, name)
-        templ = """
-        <span style="word-break:break-all;"><a href="{0}">{0}</a></span><br/>
-        <a href="{0}">[link]</a>
-        """
+        templ = """<span style="word-break:break-all;"><a href="{0}">{0}</a></span>"""
         return Markup(templ.format(data))
 
     def _thumbnail_formatter(self, context, model, name):
@@ -210,6 +207,9 @@ class UrlView(CustomModelView):
         'height',
         filters.ThumbnailFilter(
             models.Url, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
+        ),
+        filters.FilteredImageUrl(
+            models.Url, 'Filter list', options=(('1', 'Yes'), ('0', 'No')),
         )
     ]
 
