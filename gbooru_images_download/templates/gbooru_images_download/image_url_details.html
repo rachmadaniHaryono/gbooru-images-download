@@ -2,6 +2,7 @@
 {% block details_table %}
 {{super()}}
 <div>
+  <span class="hidden"> <a href="{{model.value}}">[link]</a></span>
   <h3>Match Result</h3>
   {% for match_result in model.match_results %}
     <table class="table table-condensed table-bordered">
