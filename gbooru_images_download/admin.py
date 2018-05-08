@@ -210,7 +210,8 @@ class UrlView(CustomModelView):
         ),
         filters.FilteredImageUrl(
             models.Url, 'Filter list', options=(('1', 'Yes'), ('0', 'No')),
-        )
+        ),
+        filters.TagFilter(models.Url, 'Tag',)
     ]
 
 

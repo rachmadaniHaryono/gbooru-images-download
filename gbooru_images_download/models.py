@@ -155,10 +155,14 @@ class Tag(SingleStringModel):
         'Namespace', foreign_keys='Tag.namespace_id', lazy='subquery',
         backref=db.backref('tags', lazy=True, cascade='delete'))
 
+    @property
+    def as_string(self):
+        nm = '{}:'.format(self.namespace.value) if self.namespace else ''
+        return ''.join([nm, self.value])
+
     def __repr__(self):
-        templ = '<Tag:{0.id} {1}{0.value}>'
-        return templ.format(
-            self, '{}:'.format(self.namespace.value) if self.namespace else '')
+        templ = '<Tag:{0.id} {0.as_string}>'
+        return templ.format(self)
 
 
 class HiddenTag(Base):

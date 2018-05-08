@@ -56,3 +56,17 @@ class FilteredImageUrl(BaseSQLAFilter):
 
     def operation(self):
         return 'is filtered'
+
+
+class TagFilter(BaseSQLAFilter):
+    def apply(self, query, value, alias=None):
+        pass
+
+    def operation(self):
+        return 'contain'
+
+    def get_options(self, view):
+        return [
+            (str(x.id), x.as_string)
+            for x in models.Tag.query.all()
+        ]

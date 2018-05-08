@@ -22,7 +22,7 @@
 {{pagination_section(info=False)}}
 <div class="grid">
   {% for match_result in match_results %}
-  <div class="grid-item col-xs-6 col-md-3" sytle="">
+  <div class="grid-item col-xs-6 col-md-3">
   <figure id="mr{{match_result.id}}">
     <a class="thumb" href="{{url_for('u.index', u=match_result.img_url.value)}}">
       <img class="img-responsive" src="{{match_result.thumbnail_url.value}}">
