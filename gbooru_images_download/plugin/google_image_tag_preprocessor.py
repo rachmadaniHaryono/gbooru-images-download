@@ -13,18 +13,17 @@ class TagPreProcessor(api.TagPreProcessor):
         # regex:'id',
         invalid_namespace = ['cb', 'cl', 'cr', 'id', 'msm', 'rt', 'sm', 'tu', 'th', 'tw']
         nm_table = {
-            'page url': 'page url',
-            'pt': 'picture title',
-            'ru': 'page url',
-            's': 'picture subtitle',
-            'st': 'site title',
-            'title': 'picture title',
+            'page url': api.Tag.page_url,
+            'pt': api.Tag.picture_title,
+            'ru': api.Tag.page_url,
+            's': api.picture_subtitle,
+            'st': api.Tag.site_title,
+            'title': api.Tag.picture_title,
         }
         nm_copy_table = {
-            'imgref url': 'page url',
-            'isu': 'site',
-            'rh': 'site',
-
+            'imgref url': api.Tag.page_url,
+            'isu': api.Tag.site,
+            'rh': api.Tag.site,
         }
         invalid_tags = (('s', ''), ('ity', ''), ('sc', '1'))
         for ns_val, tag_val in tags:

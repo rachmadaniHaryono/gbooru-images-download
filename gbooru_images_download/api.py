@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from urllib.parse import urlparse, urlencode, parse_qs, urljoin, quote_plus
+from enum import Enum
 import hashlib
 import json
 import os
@@ -23,6 +24,24 @@ import gbooru_images_download as gid
 from . import models, exceptions, plugin
 
 log = structlog.getLogger(__name__)
+
+
+class Tag(Enum):
+    character = 'character'
+    creator = 'creator'
+    imgref_url = 'imgref url'
+    imgres_url = 'imgres url'
+    meta = 'meta'
+    page_url = 'page url'
+    person = 'person'
+    picture_subtitle = 'picture subtitle'
+    picture_title = 'picture title'
+    query = 'query'
+    series = 'series'
+    site = 'site'
+    site_title = 'site title'
+    studio = 'studio'
+    title = 'title'
 
 
 def sha256_checksum(filename, block_size=65536):
@@ -171,9 +190,8 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
         else:
             plug = manager.activatePluginByName('Google image', 'parser')
             match_results = plug.get_match_results(search_term, page=page, session=session)
-        # json_resp = get_json_response(query=query, page=page)
-        # match_results = list(get_match_results(json_response=json_resp, session=session))
-        namespace = models.get_or_create(session, models.Namespace, value='query')[0]
+        namespace = models.get_or_create(
+            session, models.Namespace, value=Tag.query)[0]
         query_tag = models.get_or_create(session, models.Tag, namespace=namespace, value=query)[0]
         [x.img_url.tags.append(query_tag) for x in match_results if hasattr(x, 'img_url')]
         model.match_results.extend(match_results)
