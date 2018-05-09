@@ -129,7 +129,7 @@ class Namespace(SingleStringModel):
 
 
 class HiddenNamespace(Base):
-    namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'))
+    namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'), unique=True)
     namespace = db.relationship(
         'Namespace', foreign_keys='HiddenNamespace.namespace_id', lazy='subquery',
         backref=db.backref('hidden', lazy=True, cascade='delete'))
@@ -170,7 +170,7 @@ class Tag(SingleStringModel):
 
 
 class HiddenTag(Base):
-    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'))
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'), unique=True)
     tag = db.relationship(
         'Tag', foreign_keys='HiddenTag.tag_id', lazy='subquery',
         backref=db.backref('hidden', lazy=True, cascade='delete'))
