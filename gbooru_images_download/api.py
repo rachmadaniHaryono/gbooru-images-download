@@ -26,7 +26,7 @@ from . import models, exceptions, plugin
 log = structlog.getLogger(__name__)
 
 
-class Tag(Enum):
+class Namespace(Enum):
     character = 'character'
     creator = 'creator'
     imgref_url = 'imgref url'
@@ -148,7 +148,8 @@ def get_or_create_match_result(data, session=None):
     for nm_val, tag_val in data['tag']:
         tag_kwargs = {'value': str(tag_val)}
         if nm_val:
-            namespace = models.get_or_create(session, models.Namespace, value=nm_val)[0]
+            namespace = models.get_or_create(
+                session, models.Namespace, value=nm_val)[0]
             tag_kwargs['namespace'] = namespace
         tag = models.get_or_create(session, models.Tag, **tag_kwargs)[0]
         model.img_url.tags.append(tag)
@@ -191,7 +192,7 @@ def get_or_create_search_query(query, page=1, disable_cache=False, session=None)
             plug = manager.activatePluginByName('Google image', 'parser')
             match_results = plug.get_match_results(search_term, page=page, session=session)
         namespace = models.get_or_create(
-            session, models.Namespace, value=Tag.query)[0]
+            session, models.Namespace, value=Namespace.query.value)[0]
         query_tag = models.get_or_create(session, models.Tag, namespace=namespace, value=query)[0]
         [x.img_url.tags.append(query_tag) for x in match_results if hasattr(x, 'img_url')]
         model.match_results.extend(match_results)

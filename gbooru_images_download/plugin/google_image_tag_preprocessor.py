@@ -1,29 +1,29 @@
 import structlog
 
-from gbooru_images_download import api
+from gbooru_images_download.api import Namespace, TagPreProcessor
 
 
 log = structlog.getLogger(__name__)
 
 
-class TagPreProcessor(api.TagPreProcessor):
+class TagPreProcessor(TagPreProcessor):
 
     def run_tag_preprocessor(self, tags):
         # hide only: 'imgres url', 'msu', 'si'
         # regex:'id',
         invalid_namespace = ['cb', 'cl', 'cr', 'id', 'msm', 'rt', 'sm', 'tu', 'th', 'tw']
         nm_table = {
-            'page url': api.Tag.page_url,
-            'pt': api.Tag.picture_title,
-            'ru': api.Tag.page_url,
-            's': api.picture_subtitle,
-            'st': api.Tag.site_title,
-            'title': api.Tag.picture_title,
+            'page url': Namespace.page_url.value,
+            'pt': Namespace.picture_title.value,
+            'ru': Namespace.page_url.value,
+            's': Namespace.picture_subtitle.value,
+            'st': Namespace.site_title.value,
+            'title': Namespace.picture_title.value,
         }
         nm_copy_table = {
-            'imgref url': api.Tag.page_url,
-            'isu': api.Tag.site,
-            'rh': api.Tag.site,
+            'imgref url': Namespace.page_url.value,
+            'isu': Namespace.site.value,
+            'rh': Namespace.site.value,
         }
         invalid_tags = (('s', ''), ('ity', ''), ('sc', '1'))
         for ns_val, tag_val in tags:

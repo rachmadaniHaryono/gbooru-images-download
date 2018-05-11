@@ -29,8 +29,8 @@ def get_data(html_tag):
     imgres_url = html_tag.select_one('a').get('href', None)
     imgref_url = parse_qs(urlparse(imgres_url).query).get('imgrefurl', [None])[0]
     res['tag'] = []
-    res['tag'].append((api.Tag.imgres_url, imgres_url))
-    res['tag'].append((api.Tag.imgref_url, imgref_url))
+    res['tag'].append((api.Namespace.imgres_url.value, imgres_url))
+    res['tag'].append((api.Namespace.imgref_url.value, imgref_url))
     # json data
     json_data = json.loads(html_tag.select_one('.rg_meta').text)
     res['json_data'] = json_data
