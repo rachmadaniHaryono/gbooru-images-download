@@ -1,7 +1,4 @@
 """Test for api module."""
-import logging
-import json
-
 from bs4 import BeautifulSoup
 from PIL import Image
 import pytest
@@ -9,10 +6,6 @@ import requests
 import vcr
 
 from gbooru_images_download import api, models
-
-logging.basicConfig()
-vcr_log = logging.getLogger("vcr")
-vcr_log.setLevel(logging.INFO)
 
 
 @pytest.fixture()
@@ -38,32 +31,8 @@ def test_get_or_create_search_query(tmp_db):
     res = api.get_or_create_search_query('red picture')[0]
     tmp_db.session.add(res)
     tmp_db.session.commit()
-    json_items = []
-    non_json_items = []
-    logging.debug('created at {}'.format(res.created_at))
-    res_vars = vars(res)
-    for key, value in res_vars.items():
-        try:
-            json.dumps(value)
-            json_items.append((key, value))
-        except TypeError:
-            non_json_items.append((key, value))
-    assert set(json_items) == set(
-        [('page', 1), ('search_term_id', 1), ('id', 1)])
-    assert list(zip(*non_json_items))[0] == ('_sa_instance_state', 'created_at')
     assert res
     assert len(res.match_results) > 0
-
-
-@pytest.mark.no_travis
-@vcr.use_cassette('cassette/test_get_or_create_search_query_duplicate.yaml', record_mode='new_episodes')  # NOQA
-def test_get_or_create_search_query_duplicate(tmp_db):
-    """test method."""
-    v1 = api.get_or_create_search_query('red picture', disable_cache=True)[0]
-    v2 = api.get_or_create_search_query('red picture', disable_cache=True)[0]
-    tmp_db.session.add_all([v1, v2])
-    tmp_db.session.commit()
-    assert models.MatchResult.query.count() == 100
 
 
 @pytest.mark.no_travis
@@ -91,16 +60,16 @@ def test_get_or_create_match_result_from_json_resp(tmp_db):
 def test_add_tags_to_image_url(tmp_db):
     """test method."""
     args = {
-        'img_url': {'url': 'http://example.com/1.jpg', 'width': 2560, 'height': 1920},
-        'img_url_tags': [
-            {'name': 'picture title', 'namespace': 'picture title'},
-            {'name': 'site', 'namespace': 'site'},
-            {'name': 'site', 'namespace': 'site'},
-            {'name': 'img', 'namespace': 'img ext'}],
+        'url': {'value': 'http://example.com/1.jpg', 'width': 2560, 'height': 1920},
+        'tags': [
+            {'value': 'picture title', 'namespace': 'picture title'},
+            {'value': 'site', 'namespace': 'site'},
+            {'value': 'site', 'namespace': 'site'},
+            {'value': 'img', 'namespace': 'img ext'}],
     }
     img_url, _ = models.get_or_create(
-        tmp_db.session, models.ImageURL, **args['img_url'])
-    img_url_tags = api.add_tags_to_image_url(img_url, args['img_url_tags'])
+        tmp_db.session, models.Url, **args['url'])
+    img_url_tags = api.add_tags_to_image_url(img_url, args['tags'])
     models.db.session.add_all([img_url] + img_url_tags)
     models.db.session.commit()
     assert len(img_url.tags) > 0
