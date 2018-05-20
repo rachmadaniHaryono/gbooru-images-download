@@ -107,11 +107,11 @@ class SearchQuery(Base):
         for item in self.match_results:
             match_results.append({
                 'img_url': {
-                    'value': item.img_url.value,
+                    'value': str(item.img_url.value),
                     'tags': get_dict_from_tags(item.img_url),
                 },
                 'thumbnail_url': {
-                    'value': item.thumbnail_url.value,
+                    'value': str(item.thumbnail_url.value),
                     'tags': get_dict_from_tags(item.thumbnail_url),
                 },
             })
