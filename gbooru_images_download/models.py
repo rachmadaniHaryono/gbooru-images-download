@@ -66,6 +66,13 @@ class Url(Base):
             url = self.value.query.params['url']
         return os.path.splitext(os.path.basename(url))[0]
 
+    def __repr__(self):
+        size_text = ''
+        if any([self.width, self.height]):
+            size_text = ' size:{0.width}x{0.height}'.format(self)
+        templ = '<Url:{0.id} {0.value}{1}>'
+        return templ.format(self, size_text)
+
 
 class SearchTerm(SingleStringModel):
     url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
