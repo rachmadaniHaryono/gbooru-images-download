@@ -93,6 +93,34 @@ class SearchQuery(Base):
         templ = '<SearchQuery:{0.id} q:[{0.search_term.value}] p:{0.page}>'
         return templ.format(self)
 
+    def to_dict(self):
+        """Get dict from model."""
+
+        def get_dict_from_tags(url_obj):
+            res = []
+            if url_obj.tags:
+                for tag in url_obj.tags:
+                    res.append((tag.namespace.value, tag.value))
+            return res
+
+        match_results = []
+        for item in self.match_results:
+            match_results.append({
+                'img_url': {
+                    'value': item.img_url.value,
+                    'tags': get_dict_from_tags(item.img_url),
+                },
+                'thumbnail_url': {
+                    'value': item.thumbnail_url.value,
+                    'tags': get_dict_from_tags(item.thumbnail_url),
+                },
+            })
+        return {
+            'page': self.page,
+            'search_term': self.search_term.value,
+            'match_result': match_results,
+        }
+
 
 class MatchResult(Base):
     """Match result."""
