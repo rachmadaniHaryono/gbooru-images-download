@@ -34,6 +34,7 @@ setup(
         'click>=6.7',
         'fake-useragent>=0.1.10',
         'Flask-Admin>=1.5.0',
+        'Flask-Migrate>=2.1.1',
         'flask-paginate>=0.5.1',
         'flask-sqlalchemy>=2.3.2',
         'Flask-WTF>=0.14.2',
@@ -47,6 +48,7 @@ setup(
         'SQLAlchemy-Utils>=0.32.18',
         'sqlalchemy>=1.2.4',
         'structlog>=18.1.0',
+        'Yapsy>=1.11.223',
     ],
     tests_require=test_deps,
     extras_require={
