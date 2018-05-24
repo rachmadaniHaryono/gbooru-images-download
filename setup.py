@@ -1,8 +1,6 @@
 """setup."""
 # pylint: disable=invalid-name, import-error
 from setuptools import setup, find_packages
-from pipenv.project import Project
-from pipenv.utils import convert_deps_to_pip
 
 
 # Get the long description from the README file
