@@ -274,6 +274,30 @@ class SearchImagePage(Base):
         backref=db.backref('search_image_pages', lazy=True))
 
 
+class Response(Base):
+    METHODS = [
+        ['get', 'get'],
+        ['post', 'post'],
+        ['head', 'head'],
+    ]
+    method = db.Column(ChoiceType(METHODS), nullable=False)
+    url_id = db.Column(db.Integer, db.ForeignKey('url.id'), nullable=False)
+    url = db.relationship(
+        'Url', foreign_keys='Response.url_id', lazy='subquery',
+        backref=db.backref('responses', lazy=True))
+    kwargs_json = db.Column(JSONType)
+    # request result
+    status_code = db.Column(db.Integer)
+    final_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
+    final_url = db.relationship(
+        'Url', foreign_keys='Response.final_url_id', lazy='subquery',
+        backref=db.backref('on_final_responses', lazy=True))
+    text = db.Column(db.String)
+    json = db.Column(JSONType)
+    link = db.Column(JSONType)
+    reason = db.Column(db.String)
+
+
 def get_or_create(session, model, **kwargs):
     """Creates an object or returns the object if exists."""
     instance = session.query(model).filter_by(**kwargs).first()

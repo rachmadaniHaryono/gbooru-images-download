@@ -21,7 +21,7 @@ import structlog
 # from flask_restful import Api, Resource
 # from flasgger import Swagger
 
-from gbooru_images_download import models, admin, api
+from gbooru_images_download import models, admin, api, views
 from gbooru_images_download.forms import FindImageForm
 
 
@@ -249,10 +249,7 @@ def create_app(script_info=None):
     app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenTag, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
-
-    # routing
-    # app.add_url_rule('/tj/<path:search_query>', view_func=thread_json_view)
-    # app.add_url_rule('/tj/<path:search_query>/<int:page>', view_func=thread_json_view)
+    app_admin.add_view(views.ResponseView(models.Response, models.db.session, category='History'))
     return app
 
 
