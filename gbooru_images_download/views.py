@@ -1,6 +1,7 @@
+import json
+
 from flask_admin.contrib.sqla import ModelView
-from flask_admin import expose
-from wtforms import fields
+from wtforms import fields, validators
 
 
 class ResponseView(ModelView):
@@ -20,5 +21,15 @@ class ResponseView(ModelView):
         # it need choices list to at init
         form.method = fields.RadioField(
             'Method', choices=[('head', ' head'), ('post', 'post'), ('get', 'get')])
-        form.url_input = fields.StringField('Url')
+
+        def json_check(form, field):
+            if form.data:
+                try:
+                    json.loads(form.data)
+                except Exception as e:
+                    message = 'Json check failed: {}'.format(str(e))
+                    raise validators.ValidationError(message)
+
+        form.url_input = fields.StringField(
+            'Url', [validators.required(), validators.URL(), json_check])
         return form
