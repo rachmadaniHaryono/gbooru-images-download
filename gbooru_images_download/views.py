@@ -6,6 +6,8 @@ from wtforms import fields, validators
 
 class ResponseView(ModelView):
     can_edit = False
+    can_view_details = False
+    column_list = ('url', 'status_code')
     form_columns = ('method', 'kwargs_json')
     form_create_rules = ('url_input', 'method', 'kwargs_json')
     form_overrides = {
