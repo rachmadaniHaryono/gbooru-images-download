@@ -69,40 +69,6 @@ class CustomModelView(ModelView):
     column_default_sort = ('created_at', True)
 
 
-class SearchQueryView(CustomModelView):
-    """Custom view for SearchQuery model."""
-    column_formatters = {
-        'created_at': date_formatter,
-        'search_term':
-        lambda v, c, m, p:
-        Markup('<a href="{}">{}</a>'.format(
-            url_for('admin.index', query=m.search_term.value),
-            m.search_term.value
-        )),
-        'page':
-        lambda v, c, m, p:
-        Markup('<a href="{}">{}</a>'.format(
-            url_for('admin.index', query=m.search_term.value, page=m.page),
-            m.page
-        )),
-        'thumbnail':
-        lambda v, c, m, p:
-        Markup('<img style="{1}" src="{0}">'.format(
-            m.match_results[0].thumbnail_url.value,
-            ' '.join([
-                'max-width:100px;',
-                'display: block;',
-                'margin-left: auto;',
-                'margin-right: auto;',
-            ])
-        )),
-    }
-    column_list = ('created_at', 'thumbnail', 'search_term', 'page')
-    column_searchable_list = ('page', 'search_term.value')
-    column_sortable_list = ('created_at', ('search_term', 'search_term.value'), 'page')
-    column_filters = ('page', 'search_term.value')
-
-
 class JsonDataView(CustomModelView):
     """Custom view for json data model"""
 

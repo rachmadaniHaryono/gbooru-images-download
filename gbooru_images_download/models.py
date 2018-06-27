@@ -97,46 +97,20 @@ class SearchTerm(SingleStringModel):
 
 class SearchQuery(Base):
     """Search query."""
-    search_term_id = db.Column(db.Integer, db.ForeignKey('search_term.id'))
-    search_term = db.relationship(
-        'SearchTerm', lazy='subquery',
-        backref=db.backref('search_queries', lazy=True))
-    page = db.Column(db.Integer)
+    search_term = db.Column(db.String)
+    page = db.Column(db.Integer, nullable=False, default=1)
     match_results = db.relationship(
         'MatchResult', secondary=search_query_match_results, lazy='subquery',
         backref=db.backref('search_queries', lazy=True))
+    mode_id = db.Column(db.Integer, db.ForeignKey('plugin.id'))
+    mode = db.relationship(
+        'Plugin', foreign_keys='SearchQuery.mode_id', lazy='subquery',
+        backref=db.backref('search_queries', lazy=True, cascade='delete'))
 
     def __repr__(self):
-        templ = '<SearchQuery:{0.id} q:[{0.search_term.value}] p:{0.page}>'
+        templ = \
+            '<SearchQuery:{0.id} q:[{0.search_term}] p:{0.page} mode:{mode.name}>'
         return templ.format(self)
-
-    def to_dict(self):
-        """Get dict from model."""
-
-        def get_dict_from_tags(url_obj):
-            res = []
-            if url_obj.tags:
-                for tag in url_obj.tags:
-                    res.append((tag.namespace.value, tag.value))
-            return res
-
-        match_results = []
-        for item in self.match_results:
-            match_results.append({
-                'img_url': {
-                    'value': str(item.img_url.value),
-                    'tags': get_dict_from_tags(item.img_url),
-                },
-                'thumbnail_url': {
-                    'value': str(item.thumbnail_url.value),
-                    'tags': get_dict_from_tags(item.thumbnail_url),
-                },
-            })
-        return {
-            'page': self.page,
-            'search_term': self.search_term.value,
-            'match_result': match_results,
-        }
 
 
 class MatchResult(Base):
@@ -152,6 +126,12 @@ class MatchResult(Base):
     tags = db.relationship(
         'Tag', secondary=match_result_tags, lazy='subquery',
         backref=db.backref('match_results', lazy=True))
+
+    def __repr__(self):
+        templ = \
+            '<MatchResult:{0.id} url:[{0.url.value}] t_url:[{1}] tags:{2}>'
+        return templ.format(
+            self, self.thumbnail_url.value if self.thumbnail_url else '', len(self.tags))
 
 
 class JsonData(Base):
@@ -318,7 +298,7 @@ class Response(Base):
             url_model = get_or_create(session, Url, value=url)[0]
             model = cls(url=url_model, method=method)
             kwargs = {}
-            if kwargs_json.strip():
+            if kwargs_json and kwargs_json.strip():
                 kwargs = json.loads(kwargs_json)
             model.kwargs_json = kwargs
             resp = requests.request(method, url, **kwargs)
@@ -367,6 +347,11 @@ class Plugin(Base):
     website = db.Column(URLType)
     copyright = db.Column(db.String)
     categories = db.Column(ScalarListType)
+    category = db.Column(db.String)
+
+    def __repr__(self):
+        templ = '<Plugin:{0.id} name:[{0.name}], v:{0.version}>, categories:{0.categories}'
+        return templ.format(self)
 
 
 def get_or_create(session, model, **kwargs):

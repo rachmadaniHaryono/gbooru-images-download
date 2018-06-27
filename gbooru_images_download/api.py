@@ -58,6 +58,7 @@ def get_plugin_manager():
     manager.setCategoriesFilter({
         "parser": ParserPlugin,
         'tag_preprocessor': TagPreProcessor,
+        'mode': ModePlugin,
     })
     manager.setPluginPlaces([plugin.__path__[0]])
     manager.collectPlugins()
@@ -595,9 +596,17 @@ def create_thumbnail(file_path, thumbnail_folder):
 class ParserPlugin(IPlugin):
     """Base class for parser plugin."""
 
-    def get_match_results(self, search_term, page=1, session=None, **kwargs):
+    def get_match_results(self, text, session=None):
         """main function used for plugin."""
-        pass
+        raise NotImplementedError
+
+
+class ModePlugin(IPlugin):
+    """Base class for parser plugin."""
+
+    def get_match_results(self, search_term, page=1, session=None):
+        """main function used for plugin."""
+        raise NotImplementedError
 
 
 class TagPreProcessor(IPlugin):

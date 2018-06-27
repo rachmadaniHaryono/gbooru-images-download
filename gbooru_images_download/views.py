@@ -139,7 +139,9 @@ class PluginView(ModelView):
     def index_update_view(self):
         return_url = get_redirect_target() or self.get_url('.index_view')
         manager = api.get_plugin_manager()
-        keys = ['name', 'version', 'description', 'author', 'website', 'copyright', 'categories']
+        keys = [
+            'name', 'version', 'description', 'author', 'website', 'copyright',
+            'categories', 'category']
         for plugin in manager.getAllPlugins():
             with self.session.no_autoflush:
                 model = models.get_or_create(self.session, self.model, module=plugin.path)[0]
@@ -189,3 +191,67 @@ class MatchResultView(ModelView):
     }
     column_list = ('created_at', 'Entry')
     page_size = 100
+
+
+class SearchQueryView(ModelView):
+    """Custom view for SearchQuery model."""
+    column_formatters = {
+        'created_at': date_formatter,
+        'search_term':
+        lambda v, c, m, p:
+        Markup('<a href="{}">{}</a>'.format(
+            url_for('admin.index', query=m.search_term),
+            m.search_term
+        )),
+        'page':
+        lambda v, c, m, p:
+        Markup('<a href="{}">{}</a>'.format(
+            url_for('admin.index', query=m.search_term, page=m.page),
+            m.page
+        )),
+        'thumbnail':
+        lambda v, c, m, p:
+        Markup('<img style="{1}" src="{0}">'.format(
+            m.match_results[0].thumbnail_url.value,
+            ' '.join([
+                'max-width:100px;',
+                'display: block;',
+                'margin-left: auto;',
+                'margin-right: auto;',
+            ])
+        )) if m.match_results[0].thumbnail_url else '',
+    }
+    column_list = ('created_at', 'thumbnail', 'search_term', 'page')
+    column_searchable_list = ('page', 'search_term')
+    column_sortable_list = ('created_at', 'search_term', 'page')
+    column_filters = ('page', 'search_term')
+
+    def create_model(self, form):
+        """
+            Create model from form.
+
+            :param form:
+                Form instance
+        """
+        try:
+            model = self.model()
+            form.populate_obj(model)
+            # plugin.get_match_results(search_term, page, session)
+            assert model.mode.category == 'mode'
+            pm = api.get_plugin_manager()
+            plugin = pm.getPluginByName(model.mode.name, model.mode.category)
+            mrs = list(set(plugin.plugin_object.get_match_results(
+                model.search_term, model.page, self.session)))
+            model.match_results = mrs
+            self.session.add(model)
+            self._on_model_change(form, model, True)
+            self.session.commit()
+        except Exception as ex:
+            if not self.handle_view_exception(ex):
+                flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
+                log.exception('Failed to create record.')
+            self.session.rollback()
+            return False
+        else:
+            self.after_model_change(form, model, True)
+        return model
