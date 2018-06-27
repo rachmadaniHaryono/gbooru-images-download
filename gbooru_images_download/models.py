@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Model module."""
 from datetime import datetime
+import json
 import os
 
+from flask import flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_admin.babel import gettext
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
+import requests
 import structlog
 
 
@@ -296,6 +300,41 @@ class Response(Base):
     json = db.Column(JSONType)
     link = db.Column(JSONType)
     reason = db.Column(db.String)
+
+    @classmethod
+    def create(
+            cls, url, method, session, kwargs_json=None,
+            on_model_change_func=None, handle_view_exception=None, after_model_change_func=None):
+        try:
+            model = cls()
+            kwargs = {}
+            if kwargs_json:
+                kwargs = json.loads(kwargs_json)
+            # TODO
+            resp = requests.request(url, method, **kwargs)
+            # resp to model
+            model.status_code = resp.status_code
+            model.final_url = resp.url  # TODO
+            model.text = resp.text
+            model.json = resp.json()
+            model.link = resp.link
+            model.reason = resp.reason
+            # populate_obj finished
+            session.add(model)
+            if on_model_change_func:
+                on_model_change_func(model)
+            session.commit()
+        except Exception as ex:
+            if handle_view_exception:
+                if not handle_view_exception(ex):
+                    flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
+                    log.exception('Failed to create record.')
+            session.rollback()
+            return False
+        else:
+            if after_model_change_func:
+                after_model_change_func(model)
+        return model
 
 
 def get_or_create(session, model, **kwargs):
