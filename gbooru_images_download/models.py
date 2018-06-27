@@ -11,7 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
-from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
+from sqlalchemy_utils.types import ChoiceType, JSONType, ScalarListType, URLType
 import requests
 import structlog
 
@@ -352,6 +352,18 @@ class Response(Base):
             if after_model_change_func:
                 after_model_change_func(model)
         return model
+
+
+class Plugin(Base):
+
+    module = db.Column(db.String)
+    name = db.Column(db.String)
+    version = db.Column(db.String)
+    description = db.Column(db.String)
+    author = db.Column(db.String)
+    website = db.Column(URLType)
+    copyright = db.Column(db.String)
+    categories = db.Column(ScalarListType)
 
 
 def get_or_create(session, model, **kwargs):

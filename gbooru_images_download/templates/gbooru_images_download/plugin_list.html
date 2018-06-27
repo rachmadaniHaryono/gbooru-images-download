@@ -1,0 +1,4 @@
+{% extends 'admin/model/list.html' %}
+{% block model_menu_bar_before_filters %}
+<a class="btn btn-default" href="{{get_url('.index_update_view', url=return_url)}}">update</a>
+{% endblock %}

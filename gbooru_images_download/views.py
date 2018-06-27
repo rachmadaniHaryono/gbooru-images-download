@@ -11,6 +11,8 @@ from wtforms import fields, validators
 import humanize
 import structlog
 
+from . import api, models
+
 
 log = structlog.getLogger(__name__)
 
@@ -111,3 +113,43 @@ class ResponseView(ModelView):
         resp = make_response(model.text)
         resp.mimetype = model.content_type
         return resp
+
+
+class PluginView(ModelView):
+
+    def _url_formatter(self, context, model, name):
+        data = getattr(model, name)
+        templ = '<a href="{0}">{0}</a>'
+        return Markup(templ.format(data.value))
+
+    can_edit = False
+    can_delete = False
+    can_view_details = True
+    column_default_sort = ('created_at', True)
+    column_formatters = {
+        'created_at': date_formatter,
+        'website': lambda v, c, m, p: Markup(
+            '<a href="{0}">{0}</a>'.format(getattr(m, p))
+        ),
+    }
+    column_list = ('created_at', 'name', 'version', 'categories', 'description')
+    list_template = 'gbooru_images_download/plugin_list.html'
+
+    @expose('/update')
+    def index_update_view(self):
+        return_url = get_redirect_target() or self.get_url('.index_view')
+        manager = api.get_plugin_manager()
+        keys = ['name', 'version', 'description', 'author', 'website', 'copyright', 'categories']
+        for plugin in manager.getAllPlugins():
+            with self.session.no_autoflush:
+                model = models.get_or_create(self.session, self.model, module=plugin.path)[0]
+            #  update record
+            for key in keys:
+                if getattr(plugin, key):
+                    if key == 'version':
+                        setattr(model, key, str(getattr(plugin, key)))
+                    else:
+                        setattr(model, key, getattr(plugin, key))
+            self.session.add(model)
+        self.session.commit()
+        return redirect(return_url)

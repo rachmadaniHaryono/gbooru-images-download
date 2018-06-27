@@ -201,6 +201,7 @@ def create_app(script_info=None):
         logging.basicConfig(level=logging.DEBUG)
         # pprint.pprint(app.config)
         print('Log file: {}'.format(default_log_file))
+        print('DB uri: {}'.format(app.config['SQLALCHEMY_DATABASE_URI']))
     # app and db
     models.db.init_app(app)
     app.app_context().push()
@@ -250,6 +251,7 @@ def create_app(script_info=None):
     app_admin.add_view(ModelView(models.HiddenTag, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.ResponseView(models.Response, models.db.session, category='History'))
+    app_admin.add_view(views.PluginView(models.Plugin, models.db.session))
     return app
 
 
