@@ -109,7 +109,7 @@ class SearchQuery(Base):
 
     def __repr__(self):
         templ = \
-            '<SearchQuery:{0.id} q:[{0.search_term}] p:{0.page} mode:{mode.name}>'
+            '<SearchQuery:{0.id} q:[{0.search_term}] p:{0.page} {0.mode.name}>'
         return templ.format(self)
 
 
