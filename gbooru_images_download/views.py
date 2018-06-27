@@ -35,8 +35,14 @@ class ResponseView(ModelView):
         'final_url': _url_formatter,
         'method': lambda v, c, m, p: getattr(m, p).value,
         'created_at': date_formatter,
+        'text': lambda v, c, m, p: Markup(
+            '<pre><code class="language-html">{}</code></pre>'.format(
+                Markup.escape(getattr(m, p))
+            )
+        ),
     }
     column_list = ('created_at', 'status_code', 'method', 'url', 'content_type')
+    details_template = 'gbooru_images_download/response_details.html'
     form_columns = ('method', 'kwargs_json')
     form_create_rules = ('url_input', 'method', 'kwargs_json')
     form_overrides = {

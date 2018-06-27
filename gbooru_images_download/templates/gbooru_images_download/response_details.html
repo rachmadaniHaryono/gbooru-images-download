@@ -1,0 +1,9 @@
+{% extends 'admin/model/details.html' %}
+{% block head_css %}
+  {{super()}} 
+  <link rel="stylesheet" href="{{url_for('static', filename='gbooru_images_download/prism.css')}}" ><`4`>
+{% endblock %}
+{% block tail %}
+  {{super()}} 
+  <script src="{{url_for('static', filename='gbooru_images_download/prism.js')}}"></script>
+{% endblock %}
