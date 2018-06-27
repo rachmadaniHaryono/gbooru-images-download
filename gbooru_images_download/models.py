@@ -294,6 +294,7 @@ class Response(Base):
     kwargs_json = db.Column(JSONType)
     # request result
     status_code = db.Column(db.Integer)
+    reason = db.Column(db.String)
     final_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
     final_url = db.relationship(
         'Url', foreign_keys='Response.final_url_id', lazy='subquery',
@@ -301,7 +302,6 @@ class Response(Base):
     text = db.Column(db.String)
     json = db.Column(JSONType)
     links = db.Column(JSONType)
-    reason = db.Column(db.String)
 
     @classmethod
     def create(

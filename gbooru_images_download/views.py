@@ -1,17 +1,42 @@
 import json
 
 from flask_admin.contrib.sqla import ModelView
+from jinja2 import Markup
 from wtforms import fields, validators
+import humanize
 import structlog
 
 
 log = structlog.getLogger(__name__)
 
 
+def date_formatter(view, context, model, name):
+    date_data = getattr(model, name)
+    humanized_date_data = humanize.naturaltime(date_data)
+    return Markup(
+        '<span data-toogle="tooltip" title="{}">{}</span>'.format(
+            date_data, humanized_date_data
+        )
+    )
+
+
 class ResponseView(ModelView):
+
+    def _url_formatter(self, context, model, name):
+        data = getattr(model, name)
+        templ = '<a href="{0}">{0}</a>'
+        return Markup(templ.format(data.value))
+
     can_edit = False
     can_view_details = True
-    column_list = ('url', 'status_code')
+    column_default_sort = ('created_at', True)
+    column_formatters = {
+        'url': _url_formatter,
+        'final_url': _url_formatter,
+        'method': lambda v, c, m, p: getattr(m, p).value,
+        'created_at': date_formatter,
+    }
+    column_list = ('created_at', 'status_code', 'url')
     form_columns = ('method', 'kwargs_json')
     form_create_rules = ('url_input', 'method', 'kwargs_json')
     form_overrides = {
