@@ -1,6 +1,11 @@
 import json
 
+from flask import flash, make_response, redirect, request, url_for
+from flask_admin.babel import gettext
+from flask_admin.base import expose
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.helpers import get_redirect_target
+from flask_admin.model.helpers import get_mdict_item_or_list
 from jinja2 import Markup
 from wtforms import fields, validators
 import humanize
@@ -27,6 +32,19 @@ class ResponseView(ModelView):
         templ = '<a href="{0}">{0}</a>'
         return Markup(templ.format(data.value))
 
+    def _text_formatter(self, context, model, name):
+        return_url = get_redirect_target() or self.get_url('.index_view')
+        data = getattr(model, name)
+        code_section = '<pre><code class="language-html">{}</code></pre>'.format(
+            Markup.escape(data)
+        )
+        button = ''
+        if data.strip():
+            button = '<a class="btn btn-default" href="{}">view text</a>'.format(
+                url_for('.details_text_view', id=model.id, url=return_url)
+            )
+        return Markup('{}<br/>{}'.format(button, code_section))
+
     can_edit = False
     can_view_details = True
     column_default_sort = ('created_at', True)
@@ -35,11 +53,7 @@ class ResponseView(ModelView):
         'final_url': _url_formatter,
         'method': lambda v, c, m, p: getattr(m, p).value,
         'created_at': date_formatter,
-        'text': lambda v, c, m, p: Markup(
-            '<pre><code class="language-html">{}</code></pre>'.format(
-                Markup.escape(getattr(m, p))
-            )
-        ),
+        'text': _text_formatter,
     }
     column_list = ('created_at', 'status_code', 'method', 'url', 'content_type')
     details_template = 'gbooru_images_download/response_details.html'
@@ -83,3 +97,17 @@ class ResponseView(ModelView):
             after_model_change_func=lambda x: self.after_model_change(form, x, True)
         )
         return model
+
+    @expose('/details/text')
+    def details_text_view(self):
+        return_url = get_redirect_target() or self.get_url('.index_view')
+        id = get_mdict_item_or_list(request.args, 'id')
+        if id is None:
+            return redirect(return_url)
+        model = self.get_one(id)
+        if model is None:
+            flash(gettext('Record does not exist.'), 'error')
+            return redirect(return_url)
+        resp = make_response(model.text)
+        resp.mimetype = model.content_type
+        return resp
