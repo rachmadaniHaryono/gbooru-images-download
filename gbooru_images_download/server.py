@@ -237,7 +237,7 @@ def create_app(script_info=None):
     app_admin.add_view(FromFileSearchImageView(name='Image Search', endpoint='f'))
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(admin.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
+    app_admin.add_view(views.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
     app_admin.add_view(admin.UrlView(models.Url, models.db.session, category='History', name='Image URL'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))

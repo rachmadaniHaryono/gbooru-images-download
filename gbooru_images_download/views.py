@@ -153,3 +153,39 @@ class PluginView(ModelView):
             self.session.add(model)
         self.session.commit()
         return redirect(return_url)
+
+
+class MatchResultView(ModelView):
+
+    def _entry_formatter(self, context, model, name):
+        figcaption_templ = """
+        <a class="icon btn btn-default btn-xs" href="{}">
+        <span class="fa fa-eye glyphicon glyphicon-eye-open"></span>
+        image url
+        </a>"""
+        templ = '<figure><a href="{1}"><img src="{0}"></a><figcaption>{2}</figcaption></figure>'
+        field = model.url if model.img_url else model.thumbnail_url
+        figcaption = figcaption_templ.format(
+            url_for('url.details_view', id=field.id, url=url_for('matchresult.index_view')))
+        return Markup(templ.format(model.thumbnail_url.value, field.value, figcaption))
+
+    def _url_formatter(self, context, model, name):
+        data = getattr(model, name)
+        return Markup("""
+            <a href={1}>ID:{0.id}, size:{0.width}x{0.height}</a><br/>
+            <a href="{0.value}">{0.value}</a>
+            """.format(
+            data,
+            url_for('url.details_view', id=model.id),
+        ))
+
+    can_view_details = True
+    column_default_sort = ('created_at', True)
+    column_formatters = {
+        'created_at': date_formatter,
+        'Entry': _entry_formatter,
+        'img_url': _url_formatter,
+        'thumbnail_url': _url_formatter,
+    }
+    column_list = ('created_at', 'Entry')
+    page_size = 100

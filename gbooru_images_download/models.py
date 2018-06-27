@@ -23,6 +23,10 @@ url_tags = db.Table(
     'url_tags',
     db.Column('url_id', db.Integer, db.ForeignKey('url.id'), primary_key=True),
     db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True))
+match_result_tags = db.Table(
+    'match_result_tags',
+    db.Column('match_result_idd', db.Integer, db.ForeignKey('match_result.id'), primary_key=True),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True))
 search_image_match_results = db.Table(
     'search_image_match_results',
     db.Column('search_image_page_id', db.Integer, db.ForeignKey('search_image_page.id'), primary_key=True),   # NOQA
@@ -137,18 +141,17 @@ class SearchQuery(Base):
 
 class MatchResult(Base):
     """Match result."""
-    json_data = db.relationship(
-        'JsonData', secondary=match_result_json_data, lazy='subquery',
-        backref=db.backref('match_results', lazy=True))
-    # image and thumbnail
-    img_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
-    img_url = db.relationship(
-        'Url', foreign_keys='MatchResult.img_url_id', lazy='subquery',
+    url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
+    url = db.relationship(
+        'Url', foreign_keys='MatchResult.url_id', lazy='subquery',
         backref=db.backref('match_results', lazy=True, cascade='delete'))
     thumbnail_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
     thumbnail_url = relationship(
         'Url', foreign_keys='MatchResult.thumbnail_url_id', lazy='subquery',
         backref=db.backref('thumbnail_match_results', lazy=True, cascade='delete'))
+    tags = db.relationship(
+        'Tag', secondary=match_result_tags, lazy='subquery',
+        backref=db.backref('match_results', lazy=True))
 
 
 class JsonData(Base):

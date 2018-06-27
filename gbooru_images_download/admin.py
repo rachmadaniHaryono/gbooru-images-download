@@ -103,55 +103,6 @@ class SearchQueryView(CustomModelView):
     column_filters = ('page', 'search_term.value')
 
 
-class MatchResultView(CustomModelView):
-    """Custom view for MatchResult model."""
-
-    @staticmethod
-    def format_entry(m):
-        figcaption_templ = """
-        <a class="icon btn btn-default btn-xs" href="{}">
-        <span class="fa fa-eye glyphicon glyphicon-eye-open"></span>
-        image url
-        </a>"""
-        templ = '<figure><a href="{1}"><img src="{0}"></a><figcaption>{2}</figcaption></figure>'
-        field = m.img_url if m.img_url else m.thumbnail_url
-        figcaption = figcaption_templ.format(
-            url_for('url.details_view', id=field.id, url=url_for('matchresult.index_view')))
-        return Markup(templ.format(m.thumbnail_url.value, field.value, figcaption))
-
-    @staticmethod
-    def format_img_url(m, p):
-        data = getattr(m, p)
-        return Markup("""
-            <a href={1}>ID:{0.id}, size:{0.width}x{0.height}</a><br/>
-            <a href="{0.value}">{0.value}</a>
-            """.format(
-            data,
-            url_for('url.details_view', id=data.id),
-        ))
-
-    column_formatters = {
-        'created_at': date_formatter,
-        'Entry': lambda v, c, m, p: MatchResultView.format_entry(m),
-        'img_url': lambda v, c, m, p: MatchResultView.format_img_url(m, p),
-        'thumbnail_url': lambda v, c, m, p: MatchResultView.format_img_url(m, p),
-        'w': lambda v, c, m, p: m.img_url.width,
-        'h': lambda v, c, m, p: m.img_url.height,
-    }
-    column_filters = [
-        filters.MatchResultSearchQueryFilter(column=models.MatchResult, name='search query'),
-        filters.MatchResultFilteredUrlFilter(
-            column=models.MatchResult, name='url filtered',
-            options=(('1', 'yes'), ('0', 'no'))
-        )
-    ]
-    column_list = ('created_at', 'w', 'h', 'Entry')
-    column_sortable_list = (
-        'created_at', ('w', 'img_url.width'), ('h', 'img_url.height'))
-    can_view_details = True
-    page_size = 100
-
-
 class JsonDataView(CustomModelView):
     """Custom view for json data model"""
 
