@@ -27,12 +27,16 @@ def date_formatter(view, context, model, name):
     )
 
 
+def url_formatter(view, context, model, name):
+    data = getattr(model, name)
+    if not data:
+        return ''
+    templ = '<a href="{0}">{0}</a>'
+    return Markup(templ.format(data.value))
+
+
 class ResponseView(ModelView):
 
-    def _url_formatter(self, context, model, name):
-        data = getattr(model, name)
-        templ = '<a href="{0}">{0}</a>'
-        return Markup(templ.format(data.value))
 
     def _text_formatter(self, context, model, name):
         return_url = get_redirect_target() or self.get_url('.index_view')
@@ -51,8 +55,8 @@ class ResponseView(ModelView):
     can_view_details = True
     column_default_sort = ('created_at', True)
     column_formatters = {
-        'url': _url_formatter,
-        'final_url': _url_formatter,
+        'url': url_formatter,
+        'final_url': url_formatter,
         'method': lambda v, c, m, p: getattr(m, p).value,
         'created_at': date_formatter,
         'text': _text_formatter,
@@ -117,11 +121,6 @@ class ResponseView(ModelView):
 
 class PluginView(ModelView):
 
-    def _url_formatter(self, context, model, name):
-        data = getattr(model, name)
-        templ = '<a href="{0}">{0}</a>'
-        return Markup(templ.format(data.value))
-
     can_edit = False
     can_delete = False
     can_view_details = True
@@ -166,30 +165,19 @@ class MatchResultView(ModelView):
         image url
         </a>"""
         templ = '<figure><a href="{1}"><img src="{0}"></a><figcaption>{2}</figcaption></figure>'
-        field = model.url if model.img_url else model.thumbnail_url
+        field = model.url if model.url else model.thumbnail_url
         figcaption = figcaption_templ.format(
             url_for('url.details_view', id=field.id, url=url_for('matchresult.index_view')))
-        return Markup(templ.format(model.thumbnail_url.value, field.value, figcaption))
-
-    def _url_formatter(self, context, model, name):
-        data = getattr(model, name)
-        return Markup("""
-            <a href={1}>ID:{0.id}, size:{0.width}x{0.height}</a><br/>
-            <a href="{0.value}">{0.value}</a>
-            """.format(
-            data,
-            url_for('url.details_view', id=model.id),
-        ))
+        thumbnail_url_value = model.thumbnail_url.value if model.thumbnail_url else ''
+        return Markup(templ.format(thumbnail_url_value, field.value, figcaption))
 
     can_view_details = True
     column_default_sort = ('created_at', True)
     column_formatters = {
         'created_at': date_formatter,
-        'Entry': _entry_formatter,
-        'img_url': _url_formatter,
-        'thumbnail_url': _url_formatter,
+        'thumbnail_url': url_formatter,
+        'url': url_formatter,
     }
-    column_list = ('created_at', 'Entry')
     page_size = 100
 
 
@@ -197,12 +185,6 @@ class SearchQueryView(ModelView):
     """Custom view for SearchQuery model."""
     column_formatters = {
         'created_at': date_formatter,
-        'search_term':
-        lambda v, c, m, p:
-        Markup('<a href="{}">{}</a>'.format(
-            url_for('admin.index', query=m.search_term),
-            m.search_term
-        )),
         'page':
         lambda v, c, m, p:
         Markup('<a href="{}">{}</a>'.format(
@@ -219,7 +201,7 @@ class SearchQueryView(ModelView):
                 'margin-left: auto;',
                 'margin-right: auto;',
             ])
-        )) if m.match_results[0].thumbnail_url else '',
+        )) if m.match_results and m.match_results[0].thumbnail_url else '',
     }
     column_list = ('created_at', 'thumbnail', 'search_term', 'page')
     column_searchable_list = ('page', 'search_term')

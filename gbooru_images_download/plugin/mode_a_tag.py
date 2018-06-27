@@ -11,5 +11,5 @@ class ModePlugin(api.ModePlugin):
         resp_model = models.Response.create(search_term, 'get', session)
         assert resp_model, 'Response failed: {}'.format(resp_model)
         pp = api.get_plugin_manager().getPluginByName('Parser: a tag', 'parser')
-        match_results = list(pp.plugin_object.get_match_results(resp_model.text, session))
+        match_results = list(pp.plugin_object.get_match_results(resp_model.text, session, url=search_term))
         return match_results

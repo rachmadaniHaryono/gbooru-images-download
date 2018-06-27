@@ -596,7 +596,7 @@ def create_thumbnail(file_path, thumbnail_folder):
 class ParserPlugin(IPlugin):
     """Base class for parser plugin."""
 
-    def get_match_results(self, text, session=None):
+    def get_match_results(self, text, session=None, url=None):
         """main function used for plugin."""
         raise NotImplementedError
 
