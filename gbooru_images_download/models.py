@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Model module."""
 from datetime import datetime
+from urllib.parse import urlparse
 import json
 import os
 
 from flask import flash
-from flask_sqlalchemy import SQLAlchemy
 from flask_admin.babel import gettext
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import URLType, JSONType, ChoiceType
@@ -298,7 +300,7 @@ class Response(Base):
         backref=db.backref('on_final_responses', lazy=True))
     text = db.Column(db.String)
     json = db.Column(JSONType)
-    link = db.Column(JSONType)
+    links = db.Column(JSONType)
     reason = db.Column(db.String)
 
     @classmethod
@@ -306,18 +308,31 @@ class Response(Base):
             cls, url, method, session, kwargs_json=None,
             on_model_change_func=None, handle_view_exception=None, after_model_change_func=None):
         try:
-            model = cls()
+            url_scheme = urlparse(url).scheme
+            err_msg = 'Unknown scheme: {}'.format(url_scheme)
+            assert urlparse(url).scheme in ('http', 'https'), err_msg
+            url_model = get_or_create(session, Url, value=url)[0]
+            model = cls(url=url_model, method=method)
             kwargs = {}
-            if kwargs_json:
+            if kwargs_json.strip():
                 kwargs = json.loads(kwargs_json)
-            # TODO
-            resp = requests.request(url, method, **kwargs)
+            resp = requests.request(method, url, **kwargs)
+            model.kwargs_json = kwargs
             # resp to model
             model.status_code = resp.status_code
-            model.final_url = resp.url  # TODO
+            if resp.url == url:
+                final_url_model = url_model
+            else:
+                with session.no_autoflush:
+                    final_url_model = get_or_create(session, Url, value=resp.url)[0]
+
+            model.final_url = final_url_model
             model.text = resp.text
-            model.json = resp.json()
-            model.link = resp.link
+            try:
+                model.json = resp.json()
+            except json.decoder.JSONDecodeError:
+                pass
+            model.links = resp.links
             model.reason = resp.reason
             # populate_obj finished
             session.add(model)
