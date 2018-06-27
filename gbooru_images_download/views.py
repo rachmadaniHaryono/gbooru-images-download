@@ -36,7 +36,7 @@ class ResponseView(ModelView):
         'method': lambda v, c, m, p: getattr(m, p).value,
         'created_at': date_formatter,
     }
-    column_list = ('created_at', 'status_code', 'url')
+    column_list = ('created_at', 'status_code', 'method', 'url', 'content_type')
     form_columns = ('method', 'kwargs_json')
     form_create_rules = ('url_input', 'method', 'kwargs_json')
     form_overrides = {

@@ -302,6 +302,7 @@ class Response(Base):
     text = db.Column(db.String)
     json = db.Column(JSONType)
     links = db.Column(JSONType)
+    content_type = db.Column(db.String)
 
     @classmethod
     def create(
@@ -316,9 +317,10 @@ class Response(Base):
             kwargs = {}
             if kwargs_json.strip():
                 kwargs = json.loads(kwargs_json)
-            resp = requests.request(method, url, **kwargs)
             model.kwargs_json = kwargs
+            resp = requests.request(method, url, **kwargs)
             # resp to model
+            model.content_type = resp.headers.get('content-type', None)
             model.status_code = resp.status_code
             if resp.url == url:
                 final_url_model = url_model
