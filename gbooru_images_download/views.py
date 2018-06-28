@@ -257,7 +257,7 @@ class SearchQueryView(ModelView):
             plugin = pm.getPluginByName(model.mode.name, model.mode.category)
             mrs = list(set(plugin.plugin_object.get_match_results(
                 model.search_term, model.page, self.session)))
-            model.match_results = mrs
+            model.match_results.extend(mrs)
             self.session.add(model)
             self._on_model_change(form, model, True)
             self.session.commit()
