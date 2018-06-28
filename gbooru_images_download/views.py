@@ -1,8 +1,9 @@
 import json
 from urllib.parse import unquote
 
-from flask import flash, make_response, redirect, request, url_for
+from flask import current_app, flash, make_response, redirect, request, url_for
 from flask_admin.babel import gettext
+from flask_admin.form import rules
 from flask_admin.base import expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.helpers import get_redirect_target
@@ -125,13 +126,39 @@ class PluginView(ModelView):
     can_delete = False
     can_view_details = True
     column_default_sort = ('created_at', True)
+    column_filters = [
+        'category',
+        'created_at',
+        'description',
+        'name',
+        'version',
+    ]
     column_formatters = {
         'created_at': date_formatter,
         'website': lambda v, c, m, p: Markup(
             '<a href="{0}">{0}</a>'.format(getattr(m, p))
         ),
+        'path': lambda v, c, m, p: Markup(
+            '<pre style="{1}">{0}</pre>'.format(
+                getattr(m, p),
+                ' '.join([
+                    'white-space: pre-wrap;',
+                    'white-space: -moz-pre-wrap;',
+                    'white-space: -pre-wrap;',
+                    'white-space: -o-pre-wrap;',
+                    'word-wrap: break-word;',
+                ])
+            )
+        ),
+        'category': lambda v, c, m, p: Markup(
+            '<a href="{}">{}</a>'.format(
+                url_for('plugin.index_view', flt2_2=getattr(m, p)),
+                getattr(m, p)
+            )
+        ),
     }
-    column_list = ('created_at', 'name', 'version', 'categories', 'description')
+    column_list = ('created_at', 'name', 'version', 'category', 'description')
+    details_modal = True
     list_template = 'gbooru_images_download/plugin_list.html'
 
     @expose('/update')
@@ -143,7 +170,7 @@ class PluginView(ModelView):
             'categories', 'category']
         for plugin in manager.getAllPlugins():
             with self.session.no_autoflush:
-                model = models.get_or_create(self.session, self.model, module=plugin.path)[0]
+                model = models.get_or_create(self.session, self.model, path=plugin.path)[0]
             #  update record
             for key in keys:
                 if getattr(plugin, key):
@@ -275,37 +302,26 @@ class SearchQueryView(ModelView):
 class UrlView(ModelView):
     """Custom view for ImageURL model."""
 
-    def _thumbnail_formatter(self, context, model, name):
-        thumbnail_url = None
-        if model.thumbnail_match_results:
-            thumbnail_url = model.value
-        elif model.match_results and model.match_results[0].thumbnail_url:
-            thumbnail_url = model.match_results[0].thumbnail_url.value
-        if thumbnail_url:
-            return Markup('<img style="{1}" src="{0}">'.format(
-                thumbnail_url,
-                ' '.join([
-                    'max-width:100px;',
-                    'display: block;',
-                    'margin-left: auto;',
-                    'margin-right: auto;',
-                ])
-            ))
-
     can_view_details = True
     column_searchable_list = ('value', )
-    column_list = ('created_at', 'thumbnail', 'value')
+    column_list = ('created_at', 'value', 'value.netloc')
     column_formatters = {
         'created_at': date_formatter,
-        'thumbnail': _thumbnail_formatter,
         'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p)))
     }
     column_filters = [
-        filters.ThumbnailFilter(
-            models.Url, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
-        ),
+        'created_at',
         filters.FilteredImageUrl(
             models.Url, 'Filter list', options=(('1', 'Yes'), ('0', 'No')),
         ),
         filters.TagFilter(models.Url, 'Tag')
     ]
+    form_edit_rules = [
+        rules.FieldSet(('value', 'tags'), 'Url'),
+        rules.FieldSet(('match_results', 'thumbnail_match_results'), 'Match Result'),
+        rules.FieldSet(('responses', 'on_final_responses'), 'Response'),
+    ]
+    form_excluded_columns = ['created_at', ]
+    form_overrides = dict(
+        value=fields.StringField,
+    )
