@@ -9,7 +9,7 @@ class ParserPlugin(api.ParserPlugin):
     def get_match_results(self, text, session=None, url=None):
         soup = BeautifulSoup(text, 'html.parser')
         a_tags = soup.select('a')
-        pp = api.get_plugin_manager().getPluginByName('Parser: a tag on img tag', 'parser')
+        pp = api.get_plugin_manager().getPluginByName('a tag on img tag', 'parser')
         mrs = list(pp.plugin_object.get_match_results(text, session, url=url))
         list(map(session.add, mrs))
         session.commit()
