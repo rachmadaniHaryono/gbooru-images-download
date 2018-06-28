@@ -143,6 +143,7 @@ class PluginView(ModelView):
 
     can_edit = False
     can_delete = False
+    can_create = False
     can_view_details = True
     column_default_sort = ('created_at', True)
     column_filters = [
