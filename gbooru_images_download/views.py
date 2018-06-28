@@ -1,4 +1,5 @@
 import json
+from urllib.parse import unquote
 
 from flask import flash, make_response, redirect, request, url_for
 from flask_admin.babel import gettext
@@ -11,7 +12,7 @@ from wtforms import fields, validators
 import humanize
 import structlog
 
-from . import api, models
+from . import api, models, filters
 
 
 log = structlog.getLogger(__name__)
@@ -31,12 +32,11 @@ def url_formatter(view, context, model, name):
     data = getattr(model, name)
     if not data:
         return ''
-    templ = '<a href="{0}">{0}</a>'
-    return Markup(templ.format(data.value))
+    templ = '<a href="{0}">{1}</a>'
+    return Markup(templ.format(data.value, unquote(str(data.value))))
 
 
 class ResponseView(ModelView):
-
 
     def _text_formatter(self, context, model, name):
         return_url = get_redirect_target() or self.get_url('.index_view')
@@ -172,13 +172,46 @@ class MatchResultView(ModelView):
         return Markup(templ.format(thumbnail_url_value, field.value, figcaption))
 
     can_view_details = True
+    can_set_page_size = True
     column_default_sort = ('created_at', True)
+    column_filters = [
+        'created_at',
+        'tags',
+        'thumbnail_url',
+        'url',
+    ]
     column_formatters = {
         'created_at': date_formatter,
         'thumbnail_url': url_formatter,
         'url': url_formatter,
     }
     page_size = 100
+
+    def create_model(self, form):
+        try:
+            models.get_or_create_match_result(
+                self.session, url=form.url, thumbnail_url=form.thumbnail_url)
+            model = self.model()
+            form.populate_obj(model)
+            # plugin.get_match_results(search_term, page, session)
+            assert model.mode.category == 'mode'
+            pm = api.get_plugin_manager()
+            plugin = pm.getPluginByName(model.mode.name, model.mode.category)
+            mrs = list(set(plugin.plugin_object.get_match_results(
+                model.search_term, model.page, self.session)))
+            model.match_results = mrs
+            self.session.add(model)
+            self._on_model_change(form, model, True)
+            self.session.commit()
+        except Exception as ex:
+            if not self.handle_view_exception(ex):
+                flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
+                log.exception('Failed to create record.')
+            self.session.rollback()
+            return False
+        else:
+            self.after_model_change(form, model, True)
+        return model
 
 
 class SearchQueryView(ModelView):
@@ -237,3 +270,42 @@ class SearchQueryView(ModelView):
         else:
             self.after_model_change(form, model, True)
         return model
+
+
+class UrlView(ModelView):
+    """Custom view for ImageURL model."""
+
+    def _thumbnail_formatter(self, context, model, name):
+        thumbnail_url = None
+        if model.thumbnail_match_results:
+            thumbnail_url = model.value
+        elif model.match_results and model.match_results[0].thumbnail_url:
+            thumbnail_url = model.match_results[0].thumbnail_url.value
+        if thumbnail_url:
+            return Markup('<img style="{1}" src="{0}">'.format(
+                thumbnail_url,
+                ' '.join([
+                    'max-width:100px;',
+                    'display: block;',
+                    'margin-left: auto;',
+                    'margin-right: auto;',
+                ])
+            ))
+
+    can_view_details = True
+    column_searchable_list = ('value', )
+    column_list = ('created_at', 'thumbnail', 'value')
+    column_formatters = {
+        'created_at': date_formatter,
+        'thumbnail': _thumbnail_formatter,
+        'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p)))
+    }
+    column_filters = [
+        filters.ThumbnailFilter(
+            models.Url, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
+        ),
+        filters.FilteredImageUrl(
+            models.Url, 'Filter list', options=(('1', 'Yes'), ('0', 'No')),
+        ),
+        filters.TagFilter(models.Url, 'Tag')
+    ]

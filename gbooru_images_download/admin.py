@@ -10,7 +10,7 @@ from jinja2 import Markup
 import humanize
 import structlog
 
-from . import forms, models, api, filters
+from . import forms, models, api
 
 
 log = structlog.getLogger(__name__)
@@ -85,51 +85,6 @@ class JsonDataView(CustomModelView):
     column_formatters = {'created_at': date_formatter, 'value': _value_formatter, }
 
 
-class UrlView(CustomModelView):
-    """Custom view for ImageURL model."""
-
-    def _url_formatter(self, context, model, name):
-        data = getattr(model, name)
-        templ = """<span style="word-break:break-all;"><a href="{0}">{0}</a></span>"""
-        return Markup(templ.format(data))
-
-    def _thumbnail_formatter(self, context, model, name):
-        thumbnail_url = None
-        if model.thumbnail_match_results:
-            thumbnail_url = model.value
-        elif model.match_results:
-            thumbnail_url = model.match_results[0].thumbnail_url.value
-        if thumbnail_url:
-            return Markup('<img style="{1}" src="{0}">'.format(
-                thumbnail_url,
-                ' '.join([
-                    'max-width:100px;',
-                    'display: block;',
-                    'margin-left: auto;',
-                    'margin-right: auto;',
-                ])
-            ))
-
-    column_searchable_list = ('value', 'width', 'height')
-    column_list = ('created_at', 'thumbnail', 'value', 'width', 'height')
-    column_formatters = {
-        'created_at': date_formatter,
-        'value': _url_formatter,
-        'thumbnail': _thumbnail_formatter
-    }
-    inline_models = (models.FilteredImageUrl,)
-    details_template = 'gbooru_images_download/image_url_details.html'
-    column_filters = [
-        'width',
-        'height',
-        filters.ThumbnailFilter(
-            models.Url, 'Thumbnail', options=(('1', 'Yes'), ('0', 'No'))
-        ),
-        filters.FilteredImageUrl(
-            models.Url, 'Filter list', options=(('1', 'Yes'), ('0', 'No')),
-        ),
-        filters.TagFilter(models.Url, 'Tag')
-    ]
 
 
 class TagView(CustomModelView):
