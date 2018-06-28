@@ -239,7 +239,7 @@ def create_app(script_info=None):
     app_admin.add_view(views.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
-    app_admin.add_view(admin.UrlView(models.Url, models.db.session, category='History', name='Image URL'))  # NOQA
+    app_admin.add_view(views.UrlView(models.Url, models.db.session, category='History', name='Url'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     app_admin.add_view(ModelView(models.Namespace, models.db.session, category='History'))
     # app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
