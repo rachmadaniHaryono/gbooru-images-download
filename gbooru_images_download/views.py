@@ -55,12 +55,31 @@ class ResponseView(ModelView):
     can_edit = False
     can_view_details = True
     column_default_sort = ('created_at', True)
+    column_filters = [
+        'created_at',
+        'final_url',
+        'status_code',
+        'text',
+        'url',
+    ]
     column_formatters = {
-        'url': url_formatter,
-        'final_url': url_formatter,
-        'method': lambda v, c, m, p: getattr(m, p).value,
         'created_at': date_formatter,
+        'final_url': url_formatter,
+        'headers': lambda v, c, m, p: Markup(
+            '<pre><code {1} style="{2}">{0}</code></pre>'.format(
+                json.dumps(getattr(m, p), indent=1),
+                'class="language-json"',
+                ' '.join([
+                    'white-space: pre-wrap;',
+                    'white-space: -moz-pre-wrap;',
+                    'white-space: -pre-wrap;',
+                    'white-space: -o-pre-wrap;',
+                    'word-wrap: break-word;',
+                ])
+            )),
+        'method': lambda v, c, m, p: getattr(m, p).value,
         'text': _text_formatter,
+        'url': url_formatter,
     }
     column_list = ('created_at', 'status_code', 'method', 'url', 'content_type')
     details_template = 'gbooru_images_download/response_details.html'

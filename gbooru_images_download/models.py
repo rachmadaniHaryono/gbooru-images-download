@@ -9,7 +9,7 @@ from flask import flash
 from flask_admin.babel import gettext
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import attributes as orm_attributes, relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import ChoiceType, JSONType, ScalarListType, URLType
 import requests
@@ -35,10 +35,6 @@ search_query_match_results = db.Table(
     'search_query_match_results',
     db.Column('search_query_id', db.Integer, db.ForeignKey('search_query.id'), primary_key=True),
     db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True))
-match_result_json_data = db.Table(
-    'match_result_json_data',
-    db.Column('match_result_id', db.Integer, db.ForeignKey('match_result.id'), primary_key=True),
-    db.Column('json_data_id', db.Integer, db.ForeignKey('json_data.id'), primary_key=True))
 
 
 class Base(db.Model):
@@ -244,7 +240,7 @@ class Response(Base):
     text = db.Column(db.String)
     json = db.Column(JSONType)
     links = db.Column(JSONType)
-    content_type = db.Column(db.String)
+    headers = db.Column(JSONType)
 
     @classmethod
     def create(
@@ -262,14 +258,13 @@ class Response(Base):
             model.kwargs_json = kwargs
             resp = requests.request(method, url, **kwargs)
             # resp to model
-            model.content_type = resp.headers.get('content-type', None)
+            model.headers = resp.headers._store
             model.status_code = resp.status_code
             if resp.url == url:
                 final_url_model = url_model
             else:
                 with session.no_autoflush:
                     final_url_model = get_or_create(session, Url, value=resp.url)[0]
-
             model.final_url = final_url_model
             model.text = resp.text
             try:
@@ -294,6 +289,17 @@ class Response(Base):
             if after_model_change_func:
                 after_model_change_func(model)
         return model
+
+    @hybrid_property
+    def content_type(self):
+        if not hasattr(self.headers, 'get'):
+            if not isinstance(self.headers, orm_attributes.InstrumentedAttribute):
+                log.debug('headers dont have get get attr, type:{}'.format(
+                    type(self.headers)))
+            return
+        ct = self.headers.get('content-type', [None, None])[1]
+        if ct:
+            return [x.strip() for x in ct.split(';')]
 
 
 class Plugin(Base):
