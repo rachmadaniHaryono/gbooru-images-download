@@ -77,7 +77,7 @@ def get_match_results(json_response=None, session=None):
 
 class ParserPlugin(api.ParserPlugin):
 
-    def get_match_results(self, search_term, page=1, session=None, **kwargs):
+    def get_match_results(self, search_term, page=1, session=None):
         json_resp = get_json_response(query=search_term.value, page=page)
         match_results = list(get_match_results(json_response=json_resp, session=session))
         return match_results
