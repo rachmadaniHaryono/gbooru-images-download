@@ -40,8 +40,7 @@ class ThumbnailFilter(BaseSQLAFilter):
     def apply(self, query, value, alias=None):
         if value == '1':
             return query.filter(self.column.thumbnail_match_results.any())
-        else:
-            return query.filter(~self.column.thumbnail_match_results.any())
+        return query.filter(~self.column.thumbnail_match_results.any())
 
     def operation(self):
         return 'is thumbnail'
@@ -51,8 +50,7 @@ class FilteredImageUrl(BaseSQLAFilter):
     def apply(self, query, value, alias=None):
         if value == '1':
             return query.filter(self.column.filtered)
-        else:
-            return query.filter(~self.column.filtered)
+        return query.filter(~self.column.filtered)
 
     def operation(self):
         return 'is filtered'
