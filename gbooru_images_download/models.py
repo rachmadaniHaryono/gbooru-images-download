@@ -60,7 +60,7 @@ class Url(Base):
         return os.path.splitext(os.path.basename(url))[0]
 
     def __repr__(self):
-        templ = '<Url:{0.id} {0.value} tags:{}>'
+        templ = '<Url:{0.id} {0.value} tags:{1}>'
         return templ.format(self, len(self.tags))
 
 
