@@ -8,7 +8,7 @@ import os
 from flask import flash
 from flask_admin.babel import gettext
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import ChoiceType, JSONType, ScalarListType, URLType
@@ -57,42 +57,26 @@ class Url(Base):
     tags = db.relationship(
         'Tag', secondary=url_tags, lazy='subquery',
         backref=db.backref('urls', lazy=True))
-    width = db.Column(db.Integer)
-    height = db.Column(db.Integer)
 
-    def get_sorted_tags(self):
-        nnm_t, nm_t = [], []
-        for tag in self.tags:
-            (nnm_t, nm_t)[bool(tag.namespace)].append(tag)
-        res = sorted(nm_t, key=lambda x: x.namespace.value)
-        res.extend(sorted(nnm_t, key=lambda x: x.value))
-        return res
-
+    @hybrid_property
     def filename(self):
         url = str(self.value)
-        if self.value.host == 'images-blogger-opensocial.googleusercontent.com' \
-                and str(self.value.path) == '/gadgets/proxy' \
-                and 'url' in self.value.query.params:
-            url = self.value.query.params['url']
         return os.path.splitext(os.path.basename(url))[0]
+
+    @hybrid_property
+    def height(self):
+        return None
+
+    @hybrid_property
+    def width(self):
+        return None
 
     def __repr__(self):
         size_text = ''
-        if any([self.width, self.height]):
+        if self.width and self.height:
             size_text = ' size:{0.width}x{0.height}'.format(self)
         templ = '<Url:{0.id} {0.value}{1}>'
         return templ.format(self, size_text)
-
-
-class SearchTerm(SingleStringModel):
-    url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
-    url = db.relationship(
-        'Url', lazy='subquery',
-        backref=db.backref('search_term', lazy=True))
-
-    def __repr__(self):
-        templ = '<SearchTerm:{0.id} {0.value}>'
-        return templ.format(self)
 
 
 class SearchQuery(Base):
@@ -132,17 +116,6 @@ class MatchResult(Base):
             '<MatchResult:{0.id} url:[{0.url.value}] t_url:[{1}] tags:{2}>'
         return templ.format(
             self, self.thumbnail_url.value if self.thumbnail_url else '', len(self.tags))
-
-
-class JsonData(Base):
-    value = db.Column(JSONType)
-
-
-class FilteredImageUrl(Base):
-    img_url_id = db.Column(db.Integer, db.ForeignKey('url.id'), unique=True)
-    img_url = db.relationship(
-        'Url', foreign_keys='FilteredImageUrl.img_url_id', lazy='subquery',
-        backref=db.backref('filtered', lazy=True, cascade='delete'))
 
 
 class Namespace(SingleStringModel):
@@ -203,10 +176,7 @@ class HiddenTag(Base):
 class SearchImage(Base):
     """Search image"""
     img_checksum = db.Column(db.String)
-    img_url_id = db.Column(db.Integer, db.ForeignKey('url.id'))
-    img_url = db.relationship(
-        'Url', lazy='subquery',
-        backref=db.backref('search_image', lazy=True))
+    img_url = db.Column(URLType)
     # url result
     search_url = db.Column(URLType)
     similar_search_url = db.Column(URLType)
@@ -339,7 +309,7 @@ class Response(Base):
 
 class Plugin(Base):
 
-    module = db.Column(db.String)
+    path = db.Column(db.String)
     name = db.Column(db.String)
     version = db.Column(db.String)
     description = db.Column(db.String)
@@ -352,6 +322,28 @@ class Plugin(Base):
     def __repr__(self):
         templ = '<Plugin:{0.id} name:[{0.name}], v:{0.version}>, categories:{0.categories}'
         return templ.format(self)
+
+
+def get_or_create_url(session, value, **kwargs):
+    scheme = urlparse(value).scheme
+    assert scheme in ("https", 'http'), 'Unknown scheme: {}'.format(scheme)
+    return get_or_create(session, Url, value=value, **kwargs)
+
+
+def get_or_create_match_result(session, url, thumbnail_url=None, **kwargs):
+    model = MatchResult
+    url_model = get_or_create(session, Url, value=url)[0]
+    if not thumbnail_url:
+        instance, created = get_or_create(session, MatchResult, **kwargs)
+        return instance, created
+    thumbnail_url_model = get_or_create(session, Url, value=thumbnail_url)[0]
+    instance = session.query(model).filter_by(
+        url=url_model, thumnbail_url=thumbnail_url_model, **kwargs)
+    created = False
+    if instance:
+        return instance, created
+    instance = session.query(model).filter_by(**kwargs)
+    import pdb; pdb.set_trace()
 
 
 def get_or_create(session, model, **kwargs):
