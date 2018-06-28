@@ -63,20 +63,9 @@ class Url(Base):
         url = str(self.value)
         return os.path.splitext(os.path.basename(url))[0]
 
-    @hybrid_property
-    def height(self):
-        return None
-
-    @hybrid_property
-    def width(self):
-        return None
-
     def __repr__(self):
-        size_text = ''
-        if self.width and self.height:
-            size_text = ' size:{0.width}x{0.height}'.format(self)
-        templ = '<Url:{0.id} {0.value}{1}>'
-        return templ.format(self, size_text)
+        templ = '<Url:{0.id} {0.value} tags:{}>'
+        return templ.format(self, len(self.tags))
 
 
 class SearchQuery(Base):
@@ -343,7 +332,8 @@ def get_or_create_match_result(session, url, thumbnail_url=None, **kwargs):
     if instance:
         return instance, created
     instance = session.query(model).filter_by(**kwargs)
-    import pdb; pdb.set_trace()
+    #  TODO
+    #  import pdb; pdb.set_trace()
 
 
 def get_or_create(session, model, **kwargs):
