@@ -224,12 +224,6 @@ def create_app(script_info=None):
         return {'app': app, 'db': models.db, 'models': models}
 
     Migrate(app, models.db)
-
-    # api
-    # api = Api(app)
-    # Swagger(app)
-    # api.add_resource(resources.HydrusResource, '/hydrus/<string:search_query_id>')
-
     # flask-admin
     app_admin = Admin(
         app, name='Gbooru images download', template_mode='bootstrap3',
@@ -238,15 +232,10 @@ def create_app(script_info=None):
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(views.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.JsonDataView(models.JsonData, models.db.session, category='History', name='JSON Data'))  # NOQA
     app_admin.add_view(views.UrlView(models.Url, models.db.session, category='History', name='Url'))  # NOQA
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     app_admin.add_view(ModelView(models.Namespace, models.db.session, category='History'))
-    # app_admin.add_view(admin.SearchImageView(models.SearchImage, models.db.session, category='History'))  # NOQA
-    # app_admin.add_view(admin.SearchImagePageView(models.SearchImagePage, models.db.session, category='History'))  # NOQA
-    # app_admin.add_view(admin.TextMatchView(models.TextMatch, models.db.session, category='History'))  # NOQA
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(admin.FilteredImageUrlView(models.FilteredImageUrl, models.db.session, category='Filter', name='Filtered Image URL'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.HiddenTag, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
