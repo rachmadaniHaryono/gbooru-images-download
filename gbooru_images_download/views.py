@@ -263,6 +263,7 @@ class MatchResultView(ModelView):
 
 class SearchQueryView(ModelView):
     """Custom view for SearchQuery model."""
+
     column_formatters = {
         'created_at': date_formatter,
         'page':
@@ -322,12 +323,18 @@ class SearchQueryView(ModelView):
 class UrlView(ModelView):
     """Custom view for ImageURL model."""
 
+    def _content_type_formatter(self, context, model, name):
+        data = list(getattr(model, name))
+        if data:
+            return ', '.join(data)
+
     can_view_details = True
     column_searchable_list = ('value', )
-    column_list = ('created_at', 'value', 'value.netloc')
+    column_list = ('created_at', 'value', 'content_type')
     column_formatters = {
         'created_at': date_formatter,
-        'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p)))
+        'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p))),
+        'content_type': _content_type_formatter,
     }
     column_filters = [
         'created_at',

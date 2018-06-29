@@ -59,6 +59,15 @@ class Url(Base):
         url = str(self.value)
         return os.path.splitext(os.path.basename(url))[0]
 
+    @hybrid_property
+    def content_type(self):
+        res = []
+        if not isinstance(self.responses, orm_attributes.InstrumentedAttribute):
+            res.extend(set(sum([x.content_type for x in self.responses], [])))
+        if not isinstance(self.on_final_responses, orm_attributes.InstrumentedAttribute):
+            res.extend(set(sum([x.content_type for x in self.on_final_responses], [])))
+        return set(res)
+
     def __repr__(self):
         templ = '<Url:{0.id} {0.value} tags:{1}>'
         return templ.format(self, len(self.tags))
