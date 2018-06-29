@@ -288,6 +288,7 @@ class SearchQueryView(ModelView):
     column_searchable_list = ('page', 'search_term')
     column_sortable_list = ('created_at', 'search_term', 'page')
     column_filters = ('page', 'search_term')
+    form_excluded_columns = ['created_at', ]
 
     def create_model(self, form):
         """
