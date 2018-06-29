@@ -175,7 +175,7 @@ class ResponseView(ModelView):
             flash(gettext('Record does not exist.'), 'error')
             return redirect(return_url)
         resp = make_response(model.text)
-        resp.mimetype = model.content_type
+        resp.mimetype = '; '.join(model.content_type)
         return resp
 
 
