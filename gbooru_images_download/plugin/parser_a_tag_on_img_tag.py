@@ -46,5 +46,5 @@ class ParserPlugin(api.ParserPlugin):
 
         if any([skipped_hrefs, skipped_img_src]):
             log.debug('url', v=url)
-            list(map(lambda x: log.debug('href', v=x), skipped_hrefs))
-            list(map(lambda x: log.debug('img src:', v=x), skipped_img_src))
+            list(log.debug('href', v=x) for x in skipped_hrefs if x)
+            list(map(lambda x: log.debug('img src', v=x), skipped_img_src))

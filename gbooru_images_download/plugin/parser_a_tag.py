@@ -31,4 +31,4 @@ class ParserPlugin(api.ParserPlugin):
                 yield models.get_or_create(session, models.MatchResult, url=url_model)[0]
         if skipped_hrefs:
             log.debug('url', v=url)
-            list(map(lambda x: log.debug('href', v=x), skipped_hrefs))
+            list(log.debug('href', v=x) for x in skipped_hrefs if x)
