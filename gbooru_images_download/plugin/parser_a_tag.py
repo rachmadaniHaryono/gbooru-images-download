@@ -26,7 +26,7 @@ class ParserPlugin(api.ParserPlugin):
                     href = urljoin(url, href)
                 elif href.startswith(('#', '.')) and not url:
                     skipped_hrefs.append(href)
-                url_model = models.get_or_create(session, models.Url, value=href)[0]
+                url_model = models.get_or_create_url(session, value=href)[0]
                 yield models.get_or_create(session, models.MatchResult, url=url_model)[0]
         if skipped_hrefs:
             log.debug('url', v=url)

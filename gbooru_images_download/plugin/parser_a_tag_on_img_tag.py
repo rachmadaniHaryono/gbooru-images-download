@@ -32,14 +32,12 @@ class ParserPlugin(api.ParserPlugin):
                         img_src = urljoin(url, img_src)
                     elif img_src.startswith(('#', '.')) and not url:
                         skipped_img_src.append(img_src)
-                    url_model = models.get_or_create(
-                        session, models.Url, value=href)[0]
-                    img_url_model = models.get_or_create(
-                        session, models.Url, value=img_src)[0]
+                    url_model = models.get_or_create_url_url(session, value=href)[0]
+                    img_url_model = models.get_or_create_url(session, value=img_src)[0]
                     yield models.get_or_create(
                         session, models.MatchResult, url=url_model, thumbnail_url=img_url_model)[0]
 
-        if any(skipped_hrefs, skipped_img_src):
+        if any([skipped_hrefs, skipped_img_src]):
             log.debug('url', v=url)
             list(map(lambda x: log.debug('href', v=x), skipped_hrefs))
             list(map(lambda x: log.debug('img src:', v=x), skipped_img_src))
