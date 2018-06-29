@@ -215,7 +215,7 @@ def create_app(script_info=None):
     # flask-admin
     app_admin = Admin(
         app, name='Gbooru images download', template_mode='bootstrap3',
-        index_view=admin.HomeView(name='Home', template='gbooru_images_download/index.html', url='/'))  # NOQA
+        index_view=views.HomeView(name='Home', template='gbooru_images_download/index.html', url='/'))  # NOQA
     app_admin.add_view(FromFileSearchImageView(name='Image Search', endpoint='f'))
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(views.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA

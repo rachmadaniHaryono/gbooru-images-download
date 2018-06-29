@@ -2,19 +2,20 @@ import json
 from urllib.parse import unquote, urlparse
 
 from flask import flash, make_response, redirect, request, url_for
-from sqlalchemy.sql.expression import desc
+from flask_admin import AdminIndexView, expose
 from flask_admin.babel import gettext
-from flask_admin.form import rules
-from flask_admin.base import expose
 from flask_admin.contrib.sqla import ModelView
+from flask_admin.form import rules
 from flask_admin.helpers import get_redirect_target
 from flask_admin.model.helpers import get_mdict_item_or_list
+from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup
+from sqlalchemy.sql.expression import desc
 from wtforms import fields, validators
 import humanize
 import structlog
 
-from . import api, models, filters
+from . import api, models, filters, forms
 
 
 log = structlog.getLogger(__name__)
@@ -36,6 +37,32 @@ def url_formatter(view, context, model, name):
         return ''
     templ = '<a href="{0}">{1}</a>'
     return Markup(templ.format(data.value, unquote(str(data.value))))
+
+
+class HomeView(AdminIndexView):
+    @expose('/')
+    def index(self):
+        form = forms.IndexForm(request.args)
+        page = request.args.get(get_page_parameter(), type=int, default=1)
+        query = form.query.data
+        disable_cache = form.disable_cache.data
+        template_kwargs = {'entry': None, 'query': query, 'form': form, }
+        pagination_kwargs = {'page': page, 'show_single_page': False, 'bs_version': 3, }
+        if query:
+            session = models.db.session
+            model, created = api.get_or_create_search_query(
+                query, page, disable_cache=disable_cache, session=session)
+            model.match_results = [x for x in model.match_results if x]
+            models.db.session.commit()
+            pagination_kwargs['per_page'] = 1
+            pagination_kwargs['total'] = \
+                models.SearchQuery.query.join(models.SearchQuery.search_term).filter(
+                    models.SearchTerm.value == query).count()
+            template_kwargs['entry'] = model
+            template_kwargs['match_results'] = [
+                x for x in model.match_results if not x.img_url.filtered]
+        template_kwargs['pagination'] = Pagination(**pagination_kwargs)
+        return self.render('gbooru_images_download/index.html', **template_kwargs)
 
 
 class ResponseView(ModelView):
@@ -316,7 +343,7 @@ class SearchQueryView(ModelView):
         return Markup('<a href="{}">{}</a>'.format(
             url_for(
                 'matchresult.index_view', page_size=data,
-                flt0_search_query_search_term_equals=model.search_term, 
+                flt0_search_query_search_term_equals=model.search_term,
                 flt1_search_query_page_equals=model.page
             ),
             data
