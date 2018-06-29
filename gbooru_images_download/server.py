@@ -29,17 +29,6 @@ log = structlog.getLogger(__name__)
 APP_DATA_DIR = user_data_dir('gbooru_images_download', 'rachmadaniharyono')
 
 
-class ImageURLSingleView(BaseView):
-    @expose('/')
-    def index(self):
-        """View for single image url."""
-        url = request.args.get('u', None)
-        entry = models.Url.query.filter_by(value=url).one_or_none()
-        if not entry:
-            return self.render('gbooru_images_download/image_url_view.html', entry=None)
-        return redirect(url_for('url.details_view', id=entry.id))
-
-
 class FromFileSearchImageView(BaseView):
     @expose('/')
     def index(self):
@@ -217,7 +206,6 @@ def create_app(script_info=None):
         app, name='Gbooru images download', template_mode='bootstrap3',
         index_view=views.HomeView(name='Home', template='gbooru_images_download/index.html', url='/'))  # NOQA
     app_admin.add_view(FromFileSearchImageView(name='Image Search', endpoint='f'))
-    app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(views.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.UrlView(models.Url, models.db.session, category='History'))

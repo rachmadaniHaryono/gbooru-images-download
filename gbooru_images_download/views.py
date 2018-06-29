@@ -40,6 +40,7 @@ def url_formatter(view, context, model, name):
 
 
 class HomeView(AdminIndexView):
+
     @expose('/')
     def index(self):
         form = forms.IndexForm(request.args)
@@ -63,6 +64,17 @@ class HomeView(AdminIndexView):
                 x for x in model.match_results if not x.img_url.filtered]
         template_kwargs['pagination'] = Pagination(**pagination_kwargs)
         return self.render('gbooru_images_download/index.html', **template_kwargs)
+
+    @expose('/u/')
+    def url_redirect(self):
+        """View for single image url."""
+        url = request.args.get('u', None)
+        session = models.db.session
+        entry = models.get_or_create_url(session=session, value=url)[0]
+        session.commit()
+        if not entry.id:
+            return self.render('gbooru_images_download/image_url_view.html', entry=None)
+        return redirect(url_for('url.details_view', id=entry.id))
 
 
 class ResponseView(ModelView):
