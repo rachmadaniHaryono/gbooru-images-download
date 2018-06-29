@@ -280,9 +280,21 @@ class MatchResultView(ModelView):
 
 class NetlocView(ModelView):
     can_create = False
-
+    can_edit = False
+    can_set_page_size = True
+    column_editable_list = ('hidden', )
+    column_formatters = {'created_at': date_formatter}
+    edit_modal = True
+    form_columns = ('hidden', )
+    form_excluded_columns = ['created_at', ]
+    page_size = 100
 
     def get_list(self, page, sort_field, sort_desc, search, filters, page_size=None):
+        query = self.session.query(models.Url.value).distinct()
+        for item in query:
+            n_model = models.get_or_create(self.session, self.model, value=item[0].netloc)[0]
+            self.session.add(n_model)
+        self.session.commit()
         res = super().get_list(page, sort_field, sort_desc, search, filters, page_size=None)
         return res
 
