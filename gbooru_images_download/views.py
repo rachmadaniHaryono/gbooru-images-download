@@ -1,7 +1,8 @@
 import json
 from urllib.parse import unquote, urlparse
 
-from flask import current_app, flash, make_response, redirect, request, url_for
+from flask import flash, make_response, redirect, request, url_for
+from sqlalchemy.sql.expression import desc
 from flask_admin.babel import gettext
 from flask_admin.form import rules
 from flask_admin.base import expose
@@ -218,6 +219,34 @@ class MatchResultView(ModelView):
         thumbnail_url_value = model.thumbnail_url.value if model.thumbnail_url else ''
         return Markup(templ.format(thumbnail_url_value, field.value, figcaption))
 
+    def _order_by(self, query, joins, sort_joins, sort_field, sort_desc):
+        try:
+            res = super()._order_by(query, joins, sort_joins, sort_field, sort_desc)
+        except AttributeError as e:
+            if sort_field.key not in ('url', 'thumbnail_url'):
+                log.error('{}'.format(e), sort_field_key=sort_field.key)
+                raise e
+            if sort_field is not None:
+                # Handle joins
+                query, joins, alias = self._apply_path_joins(
+                    query, joins, sort_joins, inner_join=False)
+                try:
+                    field = getattr(self.model, sort_field.key)
+                    if sort_desc:
+                        query = query.join(models.Url, field).order_by(desc(models.Url.value))
+                    else:
+                        query = query.join(models.Url, field).order_by(models.Url.value)
+                except Exception as e:
+                    raise e
+            return query, joins
+        return res
+
+    def _url_formatter(self, context, model, name):
+        data = getattr(model, name)
+        res = '(ID:{}) '.format(data.id)
+        res += url_formatter(self, context, model, name)
+        return res
+
     can_view_details = True
     can_set_page_size = True
     column_default_sort = ('created_at', True)
@@ -230,7 +259,7 @@ class MatchResultView(ModelView):
     column_formatters = {
         'created_at': date_formatter,
         'thumbnail_url': url_formatter,
-        'url': url_formatter,
+        'url': _url_formatter,
     }
     column_sortable_list = ('created_at', 'url', 'thumbnail_url')
     page_size = 100
@@ -347,13 +376,7 @@ class UrlView(ModelView):
 
     can_view_details = True
     can_set_page_size = True
-    column_searchable_list = ('value', )
-    column_list = ('created_at', 'value', 'content_type')
-    column_formatters = {
-        'created_at': date_formatter,
-        'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p))),
-        'content_type': _content_type_formatter,
-    }
+    column_display_pk = True
     column_filters = [
         'created_at',
         filters.FilteredImageUrl(
@@ -361,6 +384,13 @@ class UrlView(ModelView):
         ),
         filters.TagFilter(models.Url, 'Tag')
     ]
+    column_formatters = {
+        'created_at': date_formatter,
+        'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p))),
+        'content_type': _content_type_formatter,
+    }
+    column_list = ('created_at', 'id', 'value', 'content_type')
+    column_searchable_list = ('value', )
     form_edit_rules = [
         rules.FieldSet(('value', 'tags'), 'Url'),
         rules.FieldSet(('match_results', 'thumbnail_match_results'), 'Match Result'),
