@@ -75,7 +75,7 @@ class Url(Base):
 
 class SearchQuery(Base):
     """Search query."""
-    search_term = db.Column(db.String)
+    search_term = db.Column(db.String, nullable=False)
     page = db.Column(db.Integer, nullable=False, default=1)
     match_results = db.relationship(
         'MatchResult', secondary=search_query_match_results, lazy='subquery',
