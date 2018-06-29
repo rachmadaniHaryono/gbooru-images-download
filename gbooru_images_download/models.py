@@ -265,7 +265,15 @@ class Response(Base):
             if kwargs_json and kwargs_json.strip():
                 kwargs = json.loads(kwargs_json)
             model.kwargs_json = kwargs
-            resp = requests.request(method, url, **kwargs)
+            try:
+                resp = requests.request(method, url, **kwargs)
+            except requests.exceptions.ConnectionError as ex:
+                log.exception('Failed.', url=url, ex=ex)
+                if handle_view_exception:
+                    if not handle_view_exception(ex):
+                        flash(gettext('Failed! Url: {}'.format(url), error=str(ex)), 'error')
+                session.rollback()
+                return False
             # resp to model
             model.headers = resp.headers._store
             model.status_code = resp.status_code
@@ -324,7 +332,7 @@ class Plugin(Base):
     category = db.Column(db.String)
 
     def __repr__(self):
-        templ = '<Plugin:{0.id} name:[{0.name}], v:{0.version}>, categories:{0.categories}'
+        templ = '<Plugin:{0.id} category:{0.category} name:[{0.name}] v:{0.version}>'
         return templ.format(self)
 
 
