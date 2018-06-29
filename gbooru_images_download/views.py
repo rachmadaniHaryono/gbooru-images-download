@@ -1,5 +1,5 @@
 import json
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 
 from flask import current_app, flash, make_response, redirect, request, url_for
 from flask_admin.babel import gettext
@@ -262,8 +262,24 @@ class MatchResultView(ModelView):
         return model
 
 
+class NetlocView(ModelView):
+    can_create = False
+
+
+    def get_list(self, page, sort_field, sort_desc, search, filters, page_size=None):
+        res = super().get_list(page, sort_field, sort_desc, search, filters, page_size=None)
+        return res
+
+
 class SearchQueryView(ModelView):
     """Custom view for SearchQuery model."""
+
+    def _search_term_formatter(self, context, model, name):
+        data = getattr(model, name)
+        parsed_data = urlparse(data)
+        if parsed_data.netloc and parsed_data.scheme in ('http', 'https'):
+            return Markup('<a href="{0}">{0}</a>'.format(data))
+        return data
 
     column_formatters = {
         'created_at': date_formatter,
@@ -273,19 +289,11 @@ class SearchQueryView(ModelView):
             url_for('admin.index', query=m.search_term, page=m.page),
             m.page
         )),
-        'thumbnail':
-        lambda v, c, m, p:
-        Markup('<img style="{1}" src="{0}">'.format(
-            m.match_results[0].thumbnail_url.value,
-            ' '.join([
-                'max-width:100px;',
-                'display: block;',
-                'margin-left: auto;',
-                'margin-right: auto;',
-            ])
-        )) if m.match_results and m.match_results[0].thumbnail_url else '',
+        'match result':
+        lambda v, c, m, p: len(m.match_results),
+        'search_term': _search_term_formatter,
     }
-    column_list = ('created_at', 'thumbnail', 'search_term', 'page')
+    column_list = ('created_at', 'search_term', 'page', 'match result')
     column_searchable_list = ('page', 'search_term')
     column_sortable_list = ('created_at', 'search_term', 'page')
     column_filters = ('page', 'search_term')
@@ -305,13 +313,20 @@ class SearchQueryView(ModelView):
             assert model.mode.category == 'mode'
             pm = api.get_plugin_manager()
             plugin = pm.getPluginByName(model.mode.name, model.mode.category)
-            mrs = list(set(plugin.plugin_object.get_match_results(
-                model.search_term, model.page, self.session)))
+            try:
+                mrs = list(set(plugin.plugin_object.get_match_results(
+                    model.search_term, model.page, self.session)))
+            except AssertionError as ex:
+                if not self.handle_view_exception(ex):
+                    flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
+                    log.exception('Failed to create record.')
+                self.session.rollback()
+                return False
             model.match_results.extend(mrs)
             self.session.add(model)
             self._on_model_change(form, model, True)
             self.session.commit()
-        except Exception as ex:
+        except (Exception, AssertionError) as ex:
             if not self.handle_view_exception(ex):
                 flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
                 log.exception('Failed to create record.')
