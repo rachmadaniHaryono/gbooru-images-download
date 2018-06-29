@@ -232,6 +232,7 @@ class MatchResultView(ModelView):
         'thumbnail_url': url_formatter,
         'url': url_formatter,
     }
+    column_sortable_list = ('created_at', 'url', 'thumbnail_url')
     page_size = 100
 
     def create_model(self, form):
@@ -330,6 +331,7 @@ class UrlView(ModelView):
             return ', '.join(data)
 
     can_view_details = True
+    can_set_page_size = True
     column_searchable_list = ('value', )
     column_list = ('created_at', 'value', 'content_type')
     column_formatters = {
@@ -350,6 +352,5 @@ class UrlView(ModelView):
         rules.FieldSet(('responses', 'on_final_responses'), 'Response'),
     ]
     form_excluded_columns = ['created_at', ]
-    form_overrides = dict(
-        value=fields.StringField,
-    )
+    form_overrides = dict(value=fields.StringField,)
+    page_size = 100
