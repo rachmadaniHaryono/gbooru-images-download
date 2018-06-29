@@ -17,25 +17,32 @@ class ParserPlugin(api.ParserPlugin):
         session.commit()
         skipped_hrefs = []
         skipped_img_src = []
+        keywords = ('#', '.', '/')
         for a_tag in a_tags:
             href = a_tag.attrs.get('href', None)
-            if href.startswith(('#', '.')):
+            if href.startswith(keywords):
                 href = urljoin(url, href)
-            elif href.startswith(('#', '.')) and not url:
+            elif href.startswith(keywords) and not url:
                 skipped_hrefs.append(href)
             if not href:
                 skipped_hrefs.append(href)
             for img_tag in a_tag.select('img'):
                 img_src = img_tag.get('src', None)
                 if img_src:
-                    if img_src.startswith(('#', '.')):
+                    if img_src.startswith(keywords):
                         img_src = urljoin(url, img_src)
-                    elif img_src.startswith(('#', '.')) and not url:
+                    elif img_src.startswith(keywords) and not url:
                         skipped_img_src.append(img_src)
-                    url_model = models.get_or_create_url_url(session, value=href)[0]
-                    img_url_model = models.get_or_create_url(session, value=img_src)[0]
-                    yield models.get_or_create(
-                        session, models.MatchResult, url=url_model, thumbnail_url=img_url_model)[0]
+                    img_url_model = None
+                    try:
+                        url_model = models.get_or_create_url(session, value=href)[0]
+                        img_url_model = models.get_or_create_url(session, value=img_src)[0]
+                        yield models.get_or_create(
+                            session, models.MatchResult,
+                            url=url_model, thumbnail_url=img_url_model)[0]
+                    except Exception as e:
+                        log.error('{}\nurl:{}img:{}'.format(str(e), url_model, img_url_model))
+                        raise e
 
         if any([skipped_hrefs, skipped_img_src]):
             log.debug('url', v=url)

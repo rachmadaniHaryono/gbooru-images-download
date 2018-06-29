@@ -19,12 +19,13 @@ class ParserPlugin(api.ParserPlugin):
         list(map(session.add, mrs))
         session.commit()
         skipped_hrefs = []
+        keywords = ('#', '.', '/')
         for a_tag in a_tags:
             href = a_tag.attrs.get('href', None)
             if href:
-                if href.startswith(('#', '.')) and url:
+                if href.startswith(keywords) and url:
                     href = urljoin(url, href)
-                elif href.startswith(('#', '.')) and not url:
+                elif href.startswith(keywords) and not url:
                     skipped_hrefs.append(href)
                 url_model = models.get_or_create_url(session, value=href)[0]
                 yield models.get_or_create(session, models.MatchResult, url=url_model)[0]
