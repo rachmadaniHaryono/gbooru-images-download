@@ -206,19 +206,6 @@ class PluginView(ModelView):
 
 class MatchResultView(ModelView):
 
-    def _entry_formatter(self, context, model, name):
-        figcaption_templ = """
-        <a class="icon btn btn-default btn-xs" href="{}">
-        <span class="fa fa-eye glyphicon glyphicon-eye-open"></span>
-        image url
-        </a>"""
-        templ = '<figure><a href="{1}"><img src="{0}"></a><figcaption>{2}</figcaption></figure>'
-        field = model.url if model.url else model.thumbnail_url
-        figcaption = figcaption_templ.format(
-            url_for('url.details_view', id=field.id, url=url_for('matchresult.index_view')))
-        thumbnail_url_value = model.thumbnail_url.value if model.thumbnail_url else ''
-        return Markup(templ.format(thumbnail_url_value, field.value, figcaption))
-
     def _order_by(self, query, joins, sort_joins, sort_field, sort_desc):
         try:
             res = super()._order_by(query, joins, sort_joins, sort_field, sort_desc)
