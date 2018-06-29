@@ -207,18 +207,6 @@ def create_app(script_info=None):
     app.app_context().push()
     models.db.create_all()
 
-    # default value for database
-    if not database_exist:
-        session = models.db.session
-        hidden_nms = [
-            'imgres url', 'msu', 'si', 'isu', 'rh'
-        ]
-        for nm in hidden_nms:
-            nm_m = models.get_or_create(session, models.Namespace, value=nm)[0]
-            hnm = models.get_or_create(session, models.HiddenNamespace, namespace=nm_m)[0]
-            session.add(hnm)
-        session.commit()
-
     @app.shell_context_processor
     def shell_context():
         return {'app': app, 'db': models.db, 'models': models}
@@ -232,12 +220,11 @@ def create_app(script_info=None):
     app_admin.add_view(ImageURLSingleView(name='Image Viewer', endpoint='u'))
     app_admin.add_view(views.SearchQueryView(models.SearchQuery, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.MatchResultView(models.MatchResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(views.UrlView(models.Url, models.db.session, category='History', name='Url'))  # NOQA
+    app_admin.add_view(views.UrlView(models.Url, models.db.session, category='History'))
+    app_admin.add_view(views.NetlocView(models.Netloc, models.db.session, category='History'))
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
     app_admin.add_view(ModelView(models.Namespace, models.db.session, category='History'))
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
-    app_admin.add_view(ModelView(models.HiddenNamespace, models.db.session, category='Filter'))  # NOQA
-    app_admin.add_view(ModelView(models.HiddenTag, models.db.session, category='Filter'))  # NOQA
     app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.ResponseView(models.Response, models.db.session, category='History'))
     app_admin.add_view(views.PluginView(models.Plugin, models.db.session))
