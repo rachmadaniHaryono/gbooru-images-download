@@ -112,18 +112,18 @@ class MatchResult(Base):
             self, self.thumbnail_url.value if self.thumbnail_url else '', len(self.tags))
 
 
-class Namespace(SingleStringModel):
+class Namespace(Base):
     """Namespace model."""
+    value = db.Column(db.String, unique=True, nullable=False)
+    hidden = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return '<Namespace:{0.id} {0.value}>'.format(self)
 
 
-class HiddenNamespace(Base):
-    namespace_id = db.Column(db.Integer, db.ForeignKey('namespace.id'), unique=True)
-    namespace = db.relationship(
-        'Namespace', foreign_keys='HiddenNamespace.namespace_id', lazy='subquery',
-        backref=db.backref('hidden', lazy=True, cascade='delete'))
+class Netloc(Base):
+    value = db.Column(db.String, unique=True, nullable=False)
+    hidden = db.Column(db.Boolean, default=False)
 
 
 class NamespaceHtmlClass(Base):
@@ -140,6 +140,7 @@ class Tag(SingleStringModel):
     namespace = db.relationship(
         'Namespace', foreign_keys='Tag.namespace_id', lazy='subquery',
         backref=db.backref('tags', lazy=True, cascade='delete'))
+    hidden = db.Column(db.Boolean, default=False)
 
     @property
     def as_string(self):
@@ -158,13 +159,6 @@ class Tag(SingleStringModel):
     def __repr__(self):
         templ = '<Tag:{0.id} {0.as_string}>'
         return templ.format(self)
-
-
-class HiddenTag(Base):
-    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id'), unique=True)
-    tag = db.relationship(
-        'Tag', foreign_keys='HiddenTag.tag_id', lazy='subquery',
-        backref=db.backref('hidden', lazy=True, cascade='delete'))
 
 
 class SearchImage(Base):
@@ -296,10 +290,11 @@ class Response(Base):
                 on_model_change_func(model)
             session.commit()
         except Exception as ex:
+            log.exception('Failed to create record.')
+            log.exception('Failed.', url=url, ex=ex)
             if handle_view_exception:
                 if not handle_view_exception(ex):
                     flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
-                    log.exception('Failed to create record.')
             session.rollback()
             return False
         else:
@@ -338,7 +333,8 @@ class Plugin(Base):
 
 def get_or_create_url(session, value, **kwargs):
     scheme = urlparse(value).scheme
-    assert scheme in ("https", 'http'), 'Unknown scheme: {}'.format(scheme)
+    assert scheme in ("https", 'http'), 'Unknown scheme: {}, url:{}'.format(
+        scheme, value)
     return get_or_create(session, Url, value=value, **kwargs)
 
 
