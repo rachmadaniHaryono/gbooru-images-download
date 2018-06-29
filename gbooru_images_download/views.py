@@ -239,6 +239,7 @@ class MatchResultView(ModelView):
     column_default_sort = ('created_at', True)
     column_filters = [
         'created_at',
+        'search_queries',
         'tags',
         'thumbnail_url',
         'url',
@@ -249,6 +250,7 @@ class MatchResultView(ModelView):
         'url': _url_formatter,
     }
     column_sortable_list = ('created_at', 'url', 'thumbnail_url')
+    named_filter_urls = True
     page_size = 100
 
     def create_model(self, form):
@@ -309,31 +311,29 @@ class SearchQueryView(ModelView):
             return Markup('<a href="{0}">{0}</a>'.format(data))
         return data
 
+    def _match_result_formatter(self, context, model, name):
+        data = len(model.match_results)
+        return Markup('<a href="{}">{}</a>'.format(
+            url_for(
+                'matchresult.index_view', page_size=data,
+                flt0_search_query_search_term_equals=model.search_term, 
+                flt1_search_query_page_equals=model.page
+            ),
+            data
+        ))
+
     column_formatters = {
         'created_at': date_formatter,
-        'page':
-        lambda v, c, m, p:
-        Markup('<a href="{}">{}</a>'.format(
-            url_for('admin.index', query=m.search_term, page=m.page),
-            m.page
-        )),
-        'match result':
-        lambda v, c, m, p: len(m.match_results),
+        'match result': _match_result_formatter,
         'search_term': _search_term_formatter,
     }
     column_list = ('created_at', 'search_term', 'page', 'match result')
     column_searchable_list = ('page', 'search_term')
     column_sortable_list = ('created_at', 'search_term', 'page')
     column_filters = ('page', 'search_term')
-    form_excluded_columns = ['created_at', ]
+    form_excluded_columns = ['created_at', 'match_results']
 
     def create_model(self, form):
-        """
-            Create model from form.
-
-            :param form:
-                Form instance
-        """
         try:
             model = self.model()
             form.populate_obj(model)
