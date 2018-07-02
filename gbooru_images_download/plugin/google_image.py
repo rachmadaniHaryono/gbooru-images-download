@@ -11,10 +11,34 @@ log = structlog.getLogger(__name__)
 
 
 def get_json_response(query, page=1):
+    """get json response
+
+    example query:
+
+      https://www.google.co.id/search?
+      asearch=ichunk
+      async=_id:rg_s,_pms:s,_fmt:pc
+      ei=v305W8erFZLe9QOG0amQBQ
+      ijn=1
+      q=ecchi
+      start=100
+      tbm=isch
+      ved=0ahUKEwiHh4T4n__bAhUSb30KHYZoClIQuT0ILygB
+      vet=10ahUKEwiHh4T4n__bAhUSb30KHYZoClIQuT0ILygB.v305W8erFZLe9QOG0amQBQ.i
+      yv=3
+    """
     url_page = page - 1
     url_query = {
-        'q': query, 'ijn': str(url_page), 'start': str(int(url_page) * 100),
-        'asearch': 'ichunk', 'async': '_id:rg_s,_pms:s', 'tbm': 'isch',
+        'asearch': 'ichunk',
+        'async': '_id:rg_s,_pms:s',
+        # ei
+        'ijn': str(url_page),
+        'q': query,
+        'start': str(int(url_page) * 100),
+        'tbm': 'isch',
+        # ved
+        # vet
+        # yv
     }
     parsed_url = urlparse('https://www.google.com/search')
     query_url = parsed_url._replace(query=urlencode(url_query)).geturl()
