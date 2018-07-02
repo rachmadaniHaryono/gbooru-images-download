@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import json
 import os
 
+from requests_html import HTMLSession
 from flask import flash
 from flask_admin.babel import gettext
 from flask_sqlalchemy import SQLAlchemy
@@ -244,11 +245,20 @@ class Response(Base):
     json = db.Column(JSONType)
     links = db.Column(JSONType)
     headers = db.Column(JSONType)
+    # requests_html
+    #  render = db.Column(db.Boolean)
+    #  url_links db.Column()  # NOTE: requests lib may have this too
+    #  absolute_links = db.Column()
+    #  next_url_id = db.relationship()
+    #  next_url = db.relationship
 
     @classmethod
     def create(
-            cls, url, method, session, kwargs_json=None,
+            cls, url, method, session, kwargs_json=None, requests_lib='requests', render=False,
+            return_response=False,
             on_model_change_func=None, handle_view_exception=None, after_model_change_func=None):
+        assert_msg = 'Unknown requests lib: {}'.format(requests_lib)
+        assert requests_lib in ('requests', 'requests_html'), assert_msg
         try:
             url_scheme = urlparse(url).scheme
             err_msg = 'Unknown scheme: {}'.format(url_scheme)
@@ -259,15 +269,13 @@ class Response(Base):
             if kwargs_json and kwargs_json.strip():
                 kwargs = json.loads(kwargs_json)
             model.kwargs_json = kwargs
-            try:
+            if requests_lib == 'requests_html':
+                requests_session = HTMLSession()
+                resp = getattr(requests_session, method.lower())(url, **kwargs)
+            else:
                 resp = requests.request(method, url, **kwargs)
-            except requests.exceptions.ConnectionError as ex:
-                log.exception('Failed.', url=url, ex=ex)
-                if handle_view_exception:
-                    if not handle_view_exception(ex):
-                        flash(gettext('Failed! Url: {}'.format(url), error=str(ex)), 'error')
-                session.rollback()
-                return False
+            if requests_lib == 'requests_html' and render:
+                resp.html.render()
             # resp to model
             model.headers = resp.headers._store
             model.status_code = resp.status_code
@@ -296,11 +304,16 @@ class Response(Base):
                 if not handle_view_exception(ex):
                     flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
             session.rollback()
-            return False
+            if not return_response:
+                return False
+            else:
+                return (False, None)
         else:
             if after_model_change_func:
                 after_model_change_func(model)
-        return model
+        if not return_response:
+            return model
+        return model, resp
 
     @hybrid_property
     def content_type(self):
@@ -329,13 +342,6 @@ class Plugin(Base):
     def __repr__(self):
         templ = '<Plugin:{0.id} category:{0.category} name:[{0.name}] v:{0.version}>'
         return templ.format(self)
-
-
-def get_or_create_url(session, value, **kwargs):
-    scheme = urlparse(value).scheme
-    assert scheme in ("https", 'http'), 'Unknown scheme: {}, url:{}'.format(
-        scheme, value)
-    return get_or_create(session, Url, value=value, **kwargs)
 
 
 def get_or_create_match_result(session, url, thumbnail_url=None, **kwargs):
