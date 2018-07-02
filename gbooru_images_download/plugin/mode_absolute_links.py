@@ -12,7 +12,7 @@ class ModePlugin(api.ModePlugin):
         resp_model, resp = models.Response.create(
             search_term, 'get', session, requests_lib='requests_html', return_response=True)
         assert resp_model, 'Response failed: {}'.format(resp_model)
-        pp = api.get_plugin_manager().getPluginByName('absolute_links', 'parser')
+        pp = api.get_plugin_manager().getPluginByName('absolute links', 'parser')
         match_results = list(
             pp.plugin_object.get_match_results(
                 text=resp_model.text, response=resp, session=session, url=search_term))
