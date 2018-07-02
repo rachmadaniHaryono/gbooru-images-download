@@ -1,6 +1,7 @@
 import json
 from urllib.parse import unquote, urlparse
 
+from bs4 import BeautifulSoup
 from flask import flash, make_response, redirect, request, url_for
 from flask_admin import AdminIndexView, expose
 from flask_admin.babel import gettext
@@ -80,8 +81,9 @@ class ResponseView(ModelView):
 
     def _text_formatter(self, context, model, name):
         data = getattr(model, name)
+        soup = BeautifulSoup(data, 'html.parser')
         code_section = '<pre><code class="language-html">{}</code></pre>'.format(
-            Markup.escape(data)
+            Markup.escape(soup.prettify(formatter='minimal'))
         )
         button = ''
         if data.strip():
