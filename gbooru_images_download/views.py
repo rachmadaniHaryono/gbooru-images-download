@@ -7,7 +7,6 @@ from flask_admin.babel import gettext
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.form import rules
 from flask_admin.helpers import get_redirect_target
-from flask_admin.model.helpers import get_mdict_item_or_list
 from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup
 from sqlalchemy.sql.expression import desc
@@ -80,7 +79,6 @@ class HomeView(AdminIndexView):
 class ResponseView(ModelView):
 
     def _text_formatter(self, context, model, name):
-        return_url = get_redirect_target() or self.get_url('.index_view')
         data = getattr(model, name)
         code_section = '<pre><code class="language-html">{}</code></pre>'.format(
             Markup.escape(data)
@@ -88,7 +86,7 @@ class ResponseView(ModelView):
         button = ''
         if data.strip():
             button = '<a class="btn btn-default" href="{}">view text</a>'.format(
-                url_for('.details_text_view', id=model.id, url=return_url)
+                url_for('.details_text_view', id=model.id)
             )
         return Markup('{}<br/>{}'.format(button, code_section))
 
@@ -164,13 +162,13 @@ class ResponseView(ModelView):
         )
         return model
 
-    @expose('/details/text')
-    def details_text_view(self):
+    @expose('/details/text_<id>.html')
+    def details_text_view(self, id):
         return_url = get_redirect_target() or self.get_url('.index_view')
-        id = get_mdict_item_or_list(request.args, 'id')
+        #  id = get_mdict_item_or_lit(request.args, 'id')
         if id is None:
             return redirect(return_url)
-        model = self.get_one(id)
+        model = self.get_one([id, ])
         if model is None:
             flash(gettext('Record does not exist.'), 'error')
             return redirect(return_url)
