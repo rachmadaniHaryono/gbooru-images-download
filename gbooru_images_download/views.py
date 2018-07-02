@@ -462,20 +462,13 @@ class SearchQueryView(ModelView):
             assert model.mode.category == 'mode'
             pm = api.get_plugin_manager()
             plugin = pm.getPluginByName(model.mode.name, model.mode.category)
-            try:
-                mrs = list(set(plugin.plugin_object.get_match_results(
-                    model.search_term, model.page, self.session)))
-            except AssertionError as ex:
-                if not self.handle_view_exception(ex):
-                    flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
-                    log.exception('Failed to create record.')
-                self.session.rollback()
-                return False
+            mrs = list(set(plugin.plugin_object.get_match_results(
+                model.search_term, model.page, self.session)))
             model.match_results.extend(mrs)
             self.session.add(model)
             self._on_model_change(form, model, True)
             self.session.commit()
-        except (Exception, AssertionError) as ex:
+        except Exception as ex:
             if not self.handle_view_exception(ex):
                 flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
                 log.exception('Failed to create record.')
