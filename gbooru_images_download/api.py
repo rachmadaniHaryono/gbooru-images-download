@@ -635,8 +635,8 @@ class ParserPlugin(IPlugin):
     def match_results_model_from_dict(cls, dict_input, session):
         if dict_input['tag']:
             raise NotImplementedError
-        for url, data in dict_input.items():
-            model = models.get_or_create(session, models.Url, value=url)
+        for url, data in dict_input['url'].items():
+            model = models.get_or_create(session, models.Url, value=url)[0]
             yield model
 
 
