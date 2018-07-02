@@ -70,8 +70,8 @@ class Url(Base):
         return set(res)
 
     def __repr__(self):
-        templ = '<Url:{0.id} {0.value} tags:{1}>'
-        return templ.format(self, len(self.tags))
+        templ = '<Url:{0.id} {0.value}>'
+        return templ.format(self)
 
 
 class SearchQuery(Base):
