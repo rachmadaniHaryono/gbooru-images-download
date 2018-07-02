@@ -11,7 +11,8 @@ log = structlog.getLogger(__name__)
 
 class ParserPlugin(api.ParserPlugin):
 
-    def get_match_results(self, text, session=None, url=None):
+    def get_match_results(self, text=None, response=None, session=None, url=None):
+        raise NotImplementedError
         soup = BeautifulSoup(text, 'html.parser')
         a_tags = soup.select('a')
         pp = api.get_plugin_manager().getPluginByName('a tag on img tag', 'parser')
@@ -34,7 +35,7 @@ class ParserPlugin(api.ParserPlugin):
             list(log.debug('href', v=x) for x in skipped_hrefs if x)
 
     @classmethod
-    def get_match_results_dict(self, text, session=None, url=None):
+    def get_match_results_dict(self, text=None, response=None, session=None, url=None):
         soup = BeautifulSoup(text, 'html.parser')
         res = {'url': {}, 'tag': []}
         a_tags = soup.select('a')
