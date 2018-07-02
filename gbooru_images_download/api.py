@@ -601,7 +601,7 @@ class ParserPlugin(IPlugin):
         raise NotImplementedError
 
     @classmethod
-    def get_match_results_dict(self, text, session=None, url=None):
+    def get_match_results_dict(self, text=None, response=None, session=None, url=None):
         """main function used for plugin.
 
         Returns:
@@ -630,6 +630,14 @@ class ParserPlugin(IPlugin):
             }
         """
         raise NotImplementedError
+
+    @classmethod
+    def match_results_model_from_dict(cls, dict_input, session):
+        if dict_input['tag']:
+            raise NotImplementedError
+        for url, data in dict_input.items():
+            model = models.get_or_create(session, models.Url, value=url)
+            yield model
 
 
 class ModePlugin(IPlugin):
