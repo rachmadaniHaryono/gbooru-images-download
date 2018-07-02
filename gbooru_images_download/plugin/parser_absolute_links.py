@@ -20,7 +20,8 @@ class ParserPlugin(api.ParserPlugin):
         if not response:
             # TODO: create resp obj from text
             raise NotImplementedError
-        for link in response.absolute_links:
+        links = response.html.absolute_links
+        for link in links:
             if link not in res['url']:
                 res['url'][link] = {'thumbnail': [], 'tag': []}
         return res
