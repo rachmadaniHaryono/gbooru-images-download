@@ -132,28 +132,6 @@ class ResponseView(ModelView):
         'kwargs_json': {'rows': 5},
     }
 
-    def get_create_form(self):
-        form = super().get_form()
-
-        def json_check(form, field):
-            data = form.data.strip()
-            if data:
-                try:
-                    json.loads(form.data)
-                except Exception as e:
-                    message = 'Json check failed: {}'.format(str(e))
-                    raise validators.ValidationError(message)
-
-        form.kwargs_json.kwargs['validators'].append(json_check)
-        # RadioField can't be created on form_overrides
-        # it need choices list to at init
-        form.method = fields.RadioField(
-            'Method', [validators.required()],
-            choices=[('head', ' head'), ('post', 'post'), ('get', 'get')])
-        form.url_input = fields.StringField(
-            'Url', [validators.required(), validators.URL()])
-        return form
-
     def create_model(self, form):
         model = self.model.create(
             url=form.url_input.data, method=form.method.data, session=self.session,
@@ -177,6 +155,28 @@ class ResponseView(ModelView):
         resp = make_response(model.text)
         resp.mimetype = '; '.join(model.content_type)
         return resp
+
+    def get_create_form(self):
+        form = super().get_form()
+
+        def json_check(form, field):
+            data = form.data.strip()
+            if data:
+                try:
+                    json.loads(form.data)
+                except Exception as e:
+                    message = 'Json check failed: {}'.format(str(e))
+                    raise validators.ValidationError(message)
+
+        form.kwargs_json.kwargs['validators'].append(json_check)
+        # RadioField can't be created on form_overrides
+        # it need choices list to at init
+        form.method = fields.RadioField(
+            'Method', [validators.required()],
+            choices=[('head', ' head'), ('post', 'post'), ('get', 'get')])
+        form.url_input = fields.StringField(
+            'Url', [validators.required(), validators.URL()])
+        return form
 
 
 class PluginView(ModelView):
