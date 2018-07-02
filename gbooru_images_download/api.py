@@ -600,6 +600,37 @@ class ParserPlugin(IPlugin):
         """main function used for plugin."""
         raise NotImplementedError
 
+    @classmethod
+    def get_match_results_dict(self, text, session=None, url=None):
+        """main function used for plugin.
+
+        Returns:
+            dict: match results data
+
+        Examples:
+            get match results dict.
+
+            >>> print(ParserPlugin.get_match_results_dict(text=text)
+            {
+                'url': [
+                    {
+                        'thumbnail': [
+                            'http:example.com/1.jpg',
+                            'http:example.com/1.png',
+                            ...
+                        ],
+                        'tag': [
+                            (None, 'tag_value1'),
+                            ('namespace1', 'tag_value2', ...)
+                        ],
+                    },
+                    ...
+                ]
+                'tag': [(None, 'tag_value3'), ('namespace2', 'tag_value4'), ...]
+            }
+        """
+        raise NotImplementedError
+
 
 class ModePlugin(IPlugin):
     """Base class for parser plugin."""
