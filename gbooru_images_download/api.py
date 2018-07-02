@@ -612,8 +612,8 @@ class ParserPlugin(IPlugin):
 
             >>> print(ParserPlugin.get_match_results_dict(text=text)
             {
-                'url': [
-                    {
+                'url': {
+                    'http:example.com/1.html': {
                         'thumbnail': [
                             'http:example.com/1.jpg',
                             'http:example.com/1.png',
@@ -625,7 +625,7 @@ class ParserPlugin(IPlugin):
                         ],
                     },
                     ...
-                ]
+                },
                 'tag': [(None, 'tag_value3'), ('namespace2', 'tag_value4'), ...]
             }
         """
