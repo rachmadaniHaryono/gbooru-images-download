@@ -1,5 +1,6 @@
-import json
+from functools import partial
 from urllib.parse import unquote, urlparse
+import json
 
 from bs4 import BeautifulSoup
 from flask import flash, make_response, redirect, request, url_for
@@ -8,8 +9,9 @@ from flask_admin.babel import gettext
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.form import rules
 from flask_admin.helpers import get_redirect_target
+from flask_admin.model.helpers import get_mdict_item_or_list
 from flask_paginate import get_page_parameter, Pagination
-from jinja2 import Markup
+from jinja2 import Markup, contextfunction
 from sqlalchemy.sql.expression import desc
 from wtforms import fields, validators
 import humanize
@@ -95,6 +97,7 @@ class ResponseView(ModelView):
     can_edit = False
     can_view_details = True
     column_default_sort = ('created_at', True)
+    column_display_pk = True
     column_filters = [
         'created_at',
         'final_url',
@@ -131,6 +134,7 @@ class ResponseView(ModelView):
         'method': {'class': 'radio'},
         'kwargs_json': {'rows': 5},
     }
+    list_template = 'gbooru_images_download/response_list.html'
 
     def create_model(self, form):
         model = self.model.create(
@@ -177,6 +181,81 @@ class ResponseView(ModelView):
         form.url_input = fields.StringField(
             'Url', [validators.required(), validators.URL()])
         return form
+
+    def get_details_columns(self):
+        """
+            Uses `get_column_names` to get a list of tuples with the model
+            field name and formatted name for the columns in `column_details_list`
+            and not in `column_details_exclude_list`. If `column_details_list`
+            is not set, the columns from `scaffold_list_columns` will be used.
+        """
+        try:
+            only_columns = self.column_details_list or self.scaffold_list_columns()
+        except NotImplementedError:
+            raise Exception('Please define column_details_list')
+
+        return self.get_column_names(
+            only_columns=only_columns,
+            excluded_columns=self.column_details_exclude_list,
+        )
+
+    @contextfunction
+    def get_detail_value(self, context, model, name):
+        """
+            Returns the value to be displayed in the detail view
+
+            :param context:
+                :py:class:`jinja2.runtime.Context`
+            :param model:
+                Model instance
+            :param name:
+                Field name
+        """
+        return super().get_detail_value(context, model, name)
+
+    @expose('/parser')
+    def parser_view(self):
+        return_url = get_redirect_target() or self.get_url('response.index_view')
+        id = get_mdict_item_or_list(request.args, 'id')
+        if not id:
+            id = get_mdict_item_or_list(request.args, 'response')
+        form = forms.ResponseParserForm()
+        form.response.choices = [
+            (x.id, "id:{0.id} url:{0.url.value}".format(x))
+            for x in self.session.query(self.model).all()
+        ]
+        form.parser.choices = [
+            (x.id, x.name)
+            for x in self.session.query(models.Plugin).filter_by(category='parser')
+        ]
+        resp_tmpl = partial(
+            self.render, 'gbooru_images_download/response_parser.html',
+            details_column=self._details_columns,
+            get_value=self.get_detail_value,
+            return_url=return_url,
+        )
+        if id is None:
+            return resp_tmpl(form=form)
+        model = self.get_one(id)
+        if model is None:
+            flash(gettext('Response record does not exist.'), 'error')
+            return resp_tmpl(form=form)
+        form.response.default = model.id
+        parser_model_id = get_mdict_item_or_list(request.args, 'parser')
+        parser_model = self.session.query(models.Plugin).filter_by(
+            id=parser_model_id, category='parser').first()
+        parser_result = None
+        if parser_model:
+            manager = api.get_plugin_manager()
+            plugin = manager.getPluginByName(parser_model.name, category='parser')
+            get_match_results_dict = plugin.plugin_object.get_match_results_dict
+            parser_result = get_match_results_dict(model.text, session=self.session, url=model.url)
+        return resp_tmpl(
+            model=model,
+            form=form,
+            parser_model=parser_model,
+            parser_result=parser_result,
+        )
 
 
 class PluginView(ModelView):

@@ -1,0 +1,5 @@
+{% extends 'admin/model/list.html' %}
+{% block model_menu_bar_before_filters %}
+{{super()}}
+<li><a  href="{{url_for('.parser_view')}}">Parser</a></li>
+{% endblock %}

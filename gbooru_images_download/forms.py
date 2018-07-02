@@ -28,3 +28,8 @@ class FindImageForm(FlaskForm):
     url = StringField('URL', validators=[Optional()])
     search_type = SelectField('Search Type', validators=[Optional()], choices=models.SearchImagePage.TYPES)  # NOQA
     disable_cache = BooleanField(validators=[Optional()])
+
+
+class ResponseParserForm(FlaskForm):
+    response = SelectField()
+    parser = SelectField()

@@ -1,0 +1,32 @@
+{% extends 'admin/model/details.html' %}
+
+{% block navlinks %}
+<ul class="nav nav-tabs">
+  <li> <a href="{{ return_url }}">{{ _gettext('List') }}</a> </li>
+  {%- if admin_view.can_create -%}
+    <li> <a href="{{ get_url('.create_view', url=return_url) }}">{{ _gettext('Create') }}</a> </li>
+  {%- endif -%}
+  {%- if admin_view.can_edit -%}
+    <li> <a href="{{ get_url('.edit_view', id=request.args.get('id'), url=return_url) }}">{{ _gettext('Edit') }}</a> </li>
+  {%- endif -%}
+  <li> <a href="{{ get_url('.details_view', id=request.args.get('id'), url=return_url) }}">{{ _gettext('Details') }}</a> </li>
+  <li class="active"> <a href="javascript:void(0)">{{ _gettext('Parser') }}</a> </li>
+</ul>
+{% endblock %}
+
+{% block details_table %}
+<form method="GET" action="{{url_for('.parser_view')}}">
+  <div class="form-group"> {{ form.response.label }} {{ form.response(class_="form-control") }} </div>
+  <div class="form-group"> {{ form.parser.label }} {{ form.parser(class_="form-control") }} </div>
+  <input class="btn btn-default" type="submit" value="parse">
+</form>
+{{super()}}
+{% if parser_result %}
+<div>
+  <pre><code>
+  {{parser_result}}
+  </code></pre>
+</div>
+  
+{% endif %}
+{% endblock %}
