@@ -1,4 +1,5 @@
 from functools import partial
+from pprint import pformat
 from urllib.parse import unquote, urlparse
 import json
 
@@ -246,15 +247,17 @@ class ResponseView(ModelView):
             id=parser_model_id, category='parser').first()
         parser_result = None
         if parser_model:
+            form.parser.default = parser_model.id
             manager = api.get_plugin_manager()
             plugin = manager.getPluginByName(parser_model.name, category='parser')
             get_match_results_dict = plugin.plugin_object.get_match_results_dict
-            parser_result = get_match_results_dict(model.text, session=self.session, url=model.url)
+            parser_result = get_match_results_dict(
+                model.text, session=self.session, url=str(model.url.value))
         return resp_tmpl(
             model=model,
             form=form,
             parser_model=parser_model,
-            parser_result=parser_result,
+            parser_result=pformat(parser_result, width=120),
         )
 
 

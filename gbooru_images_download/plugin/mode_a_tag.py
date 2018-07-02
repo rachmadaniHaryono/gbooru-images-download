@@ -14,3 +14,8 @@ class ModePlugin(api.ModePlugin):
         match_results = list(
             pp.plugin_object.get_match_results(resp_model.text, session, url=search_term))
         return match_results
+
+    @classmethod
+    def get_match_results_dict(cls, text, session=None, url=None):
+        """main function used for plugin."""
+        raise NotImplementedError
