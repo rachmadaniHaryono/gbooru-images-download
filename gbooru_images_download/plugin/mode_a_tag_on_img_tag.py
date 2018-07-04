@@ -9,7 +9,7 @@ from gbooru_images_download import models, api
 log = structlog.getLogger(__name__)
 
 
-class ParserPlugin(api.ParserPlugin):
+class ParserPlugin(api.ModePlugin):
 
     def get_match_results(self, text, session=None, url=None):
         soup = BeautifulSoup(text, 'html.parser')
@@ -48,3 +48,8 @@ class ParserPlugin(api.ParserPlugin):
             log.debug('url', v=url)
             list(log.debug('href', v=x) for x in skipped_hrefs if x)
             list(map(lambda x: log.debug('img src', v=x), skipped_img_src))
+
+    @classmethod
+    def get_match_results_dict(self, text, session=None, url=None):
+        """main function used for plugin."""
+        raise NotImplementedError

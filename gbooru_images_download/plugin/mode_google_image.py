@@ -99,7 +99,7 @@ def get_match_results(json_response=None, session=None):
         yield
 
 
-class ParserPlugin(api.ParserPlugin):
+class ParserPlugin(api.ModePlugin):
 
     def get_match_results(self, search_term, page=1, session=None):
         json_resp = get_json_response(query=search_term.value, page=page)
