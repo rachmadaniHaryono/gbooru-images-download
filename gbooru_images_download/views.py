@@ -217,6 +217,7 @@ class ResponseView(ModelView):
     @expose('/parser')
     def parser_view(self):
         return_url = get_redirect_target() or self.get_url('response.index_view')
+        plugin_category = 'mode'
         id = get_mdict_item_or_list(request.args, 'id')
         if not id:
             id = get_mdict_item_or_list(request.args, 'response')
@@ -227,7 +228,7 @@ class ResponseView(ModelView):
         ]
         form.parser.choices = [
             (x.id, x.name)
-            for x in self.session.query(models.Plugin).filter_by(category='parser')
+            for x in self.session.query(models.Plugin).filter_by(category=plugin_category)
         ]
         resp_tmpl = partial(
             self.render, 'gbooru_images_download/response_parser.html',
@@ -244,12 +245,13 @@ class ResponseView(ModelView):
         form.response.default = model.id
         parser_model_id = get_mdict_item_or_list(request.args, 'parser')
         parser_model = self.session.query(models.Plugin).filter_by(
-            id=parser_model_id, category='parser').first()
+            id=parser_model_id, category=plugin_category).first()
         parser_result = None
         if parser_model:
             form.parser.default = parser_model.id
+            form.process()
             manager = api.get_plugin_manager()
-            plugin = manager.getPluginByName(parser_model.name, category='parser')
+            plugin = manager.getPluginByName(parser_model.name, category=plugin_category)
             get_match_results_dict = plugin.plugin_object.get_match_results_dict
             parser_result = get_match_results_dict(
                 model.text, session=self.session, url=str(model.url.value))
@@ -264,7 +266,6 @@ class ResponseView(ModelView):
 class PluginView(ModelView):
 
     can_edit = False
-    can_delete = False
     can_create = False
     can_view_details = True
     column_default_sort = ('created_at', True)

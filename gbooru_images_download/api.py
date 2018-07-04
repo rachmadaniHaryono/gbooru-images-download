@@ -56,7 +56,6 @@ def sha256_checksum(filename, block_size=65536):
 def get_plugin_manager():
     manager = PluginManager(plugin_info_ext='ini')
     manager.setCategoriesFilter({
-        "parser": ParserPlugin,
         'tag_preprocessor': TagPreProcessor,
         'mode': ModePlugin,
     })
@@ -593,11 +592,16 @@ def create_thumbnail(file_path, thumbnail_folder):
         return thumbnail_path
 
 
-class ParserPlugin(IPlugin):
+class ModePlugin(IPlugin):
     """Base class for parser plugin."""
 
-    def get_match_results(self, text, session=None, url=None):
-        """main function used for plugin."""
+    def get_match_results(
+            self, search_term=None, page=1, text=None, response=None, session=None, url=None):
+        """Get match result models.
+
+        - search_term and page
+        - text or response or both
+        """
         raise NotImplementedError
 
     @classmethod
@@ -629,23 +633,15 @@ class ParserPlugin(IPlugin):
                 'tag': [(None, 'tag_value3'), ('namespace2', 'tag_value4'), ...]
             }
         """
-        raise NotImplementedError
+        return {}
 
     @classmethod
-    def match_results_model_from_dict(cls, dict_input, session):
+    def match_results_models_from_dict(cls, dict_input, session):
         if dict_input['tag']:
             raise NotImplementedError
         for url, data in dict_input['url'].items():
             model = models.get_or_create(session, models.Url, value=url)[0]
             yield model
-
-
-class ModePlugin(IPlugin):
-    """Base class for parser plugin."""
-
-    def get_match_results(self, search_term, page=1, session=None):
-        """main function used for plugin."""
-        raise NotImplementedError
 
 
 class TagPreProcessor(IPlugin):
