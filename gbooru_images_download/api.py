@@ -175,22 +175,15 @@ def get_match_results(json_response=None, session=None):
 def get_or_create_search_query(query, page=1, disable_cache=False, session=None):
     """Get or create search_query."""
     session = models.db.session if session is None else session
-    mode = None
-    search_term = models.get_or_create(session, models.SearchTerm, value=query)[0]
+    search_term = query
     with session.no_autoflush:
         model, created = models.get_or_create(
             session, models.SearchQuery, search_term=search_term, page=page)
 
     if created or disable_cache:
         manager = get_plugin_manager()
-        if mode == 'all':
-            pass
-            # plugs = manager.getAllPlugins()
-            # match_results = plugs
-            # match_results = sum(match_results, [])
-        else:
-            plug = manager.activatePluginByName('Google image', 'parser')
-            match_results = plug.get_match_results(search_term, page=page, session=session)
+        plug = manager.activatePluginByName('Google image', 'mode')
+        match_results = plug.get_match_results(search_term, page=page, session=session)
         namespace = models.get_or_create(
             session, models.Namespace, value=Namespace.query.value)[0]
         query_tag = models.get_or_create(session, models.Tag, namespace=namespace, value=query)[0]
@@ -638,10 +631,29 @@ class ModePlugin(IPlugin):
     @classmethod
     def match_results_models_from_dict(cls, dict_input, session):
         if dict_input['tag']:
-            raise NotImplementedError
+            pass
         for url, data in dict_input['url'].items():
-            model = models.get_or_create(session, models.Url, value=url)[0]
-            yield model
+            tag_models = []
+            for nm, tag_value in data['tag']:
+                #  tag_model = models.get_or_create_tag()
+                if nm:
+                    nm_model = models.get_or_create(session, models.Namespace, value=nm)[0]
+                    tag_models.append(models.get_or_create(
+                        session, models.Tag, value=tag_value, namespace=nm_model)[0])
+                else:
+                    tag_models.append(models.get_or_create(
+                        session, models.Tag, value=tag_value, namespace=None)[0])
+                pass
+            mr_model = None
+            if data['thumbnail']:
+                for tu in data['thumbnail']:
+                    mr_model = models.get_or_create_match_result(
+                        session, url=url, thumbnail_url=tu)[0]
+                    yield mr_model
+            else:
+                mr_model = models.get_or_create_match_result(session, url=url)[0]
+                yield mr_model
+            mr_model.url.tags.extend(tag_models)
 
 
 class TagPreProcessor(IPlugin):
