@@ -79,6 +79,11 @@ class HomeView(AdminIndexView):
         return redirect(url_for('url.details_view', id=entry.id))
 
 
+class NamespaceView(ModelView):
+
+    column_editable_list = ('hidden', )
+
+
 class ResponseView(ModelView):
 
     def _text_formatter(self, context, model, name):
