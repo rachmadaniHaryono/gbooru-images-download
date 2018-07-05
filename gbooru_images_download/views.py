@@ -47,27 +47,36 @@ class HomeView(AdminIndexView):
     @expose('/')
     def index(self):
         form = forms.IndexForm(request.args)
-        page = request.args.get(get_page_parameter(), type=int, default=1)
-        query = form.query.data
-        disable_cache = form.disable_cache.data
-        template_kwargs = {'entry': None, 'query': query, 'form': form, }
-        pagination_kwargs = {'page': page, 'show_single_page': False, 'bs_version': 3, }
-        if query:
-            # TODO
+        if form.search_term.data:
             session = models.db.session
-            model, created = api.get_or_create_search_query(
-                query, page, disable_cache=disable_cache, session=session)
-            model.match_results = [x for x in model.match_results if x]
-            models.db.session.commit()
-            pagination_kwargs['per_page'] = 1
-            pagination_kwargs['total'] = \
-                models.SearchQuery.query.join(models.SearchQuery.search_term).filter(
-                    models.SearchTerm.value == query).count()
-            template_kwargs['entry'] = model
-            template_kwargs['match_results'] = [
-                x for x in model.match_results if not x.img_url.filtered]
-        template_kwargs['pagination'] = Pagination(**pagination_kwargs)
-        return self.render('gbooru_images_download/index.html', **template_kwargs)
+            manager = models.get_plugin_manager()
+            plugin_inst = manager.getPluginByName(form.mode.data, category='mode')
+            plugin_model = models.get_or_create(session, models.Plugin, path=plugin_inst.path)[0]
+            form.mode.data = plugin_model
+            session = models.db.session
+            model, created = models.get_or_create(
+                session, models.SearchQuery,
+                search_term=form.search_term.data,
+                page=form.page.data,
+                mode=plugin_model
+            )
+            if not created and not form.disable_cache.data:
+                page_size = len(model.match_results)
+                return redirect(url_for(
+                    'matchresult.index_view', page_size=page_size,
+                    flt0_search_query_search_term_equals=model.search_term,
+                    flt1_search_query_page_equals=model.page
+                ))
+            model = models.SearchQuery.create(form, session)
+            if model:
+                page_size = len(model.match_results)
+                return redirect(url_for(
+                    'matchresult.index_view', page_size=page_size,
+                    flt0_search_query_search_term_equals=model.search_term,
+                    flt1_search_query_page_equals=model.page
+                ))
+            flash(gettext('Search error.'), 'error')
+        return self.render('gbooru_images_download/index.html', form=form)
 
     @expose('/u/')
     def url_redirect(self):
