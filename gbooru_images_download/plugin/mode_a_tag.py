@@ -17,7 +17,6 @@ class ModePlugin(api.ModePlugin):
         assert_msg = 'Unknown scheme: {}'.format(scheme)
         assert scheme in ('http', 'https'), assert_msg
         resp_model = models.Response.create(search_term, 'get', session)
-        assert resp_model, 'Response failed: {}'.format(resp_model)
         mr_dict = self.get_match_results_dict(
             text=resp_model.text, session=session, url=search_term)
         match_results = self.match_results_models_from_dict(mr_dict, session)
