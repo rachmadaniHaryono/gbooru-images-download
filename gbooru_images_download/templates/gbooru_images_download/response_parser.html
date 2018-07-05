@@ -23,9 +23,37 @@
 {{super()}}
 {% if parser_result %}
 <div>
-  <pre><code>
-  {{parser_result}}
-  </code></pre>
+
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#table_data" role="tab" data-toggle="tab">table</a></li>
+    <li role="presentation"><a href="#raw_data" role="tab" data-toggle="tab">raw data</a></li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane" id="raw_data">
+      <pre><code>
+      {{parser_result_text}}
+      </code></pre>
+    </div>
+    <div role="tabpanel" class="tab-pane active" id="table_data">
+      <table class="table table-bordered table-condensed">
+        {% for key, value in parser_result.url.items() %}
+        <tr>
+          <td>
+            <div>Url: {{key}}</div>
+            Thumbnail: 
+            <ul> {% for tu in value.thumbnail %} <li>{{tu}}</li> {% endfor %} </ul>
+            Tag:
+            <ul> {% for ta_nm, ta_value in value.tag %} <li>{{ta_nm}}: {{ta_value}}</li> {% endfor %} </ul>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
 </div>
   
 {% endif %}
