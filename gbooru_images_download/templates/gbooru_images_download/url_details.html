@@ -1,0 +1,6 @@
+{% extends 'admin/model/details.html' %}
+{% block details_table %}
+{{super()}}
+<ul> {% for tag in model.tags %} <li>{{tag.as_string}}</li> {% endfor %} </ul>
+{% endblock %}
+
