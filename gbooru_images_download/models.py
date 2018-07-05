@@ -254,8 +254,8 @@ class Response(Base):
 
     @classmethod
     def create(
-            cls, url, method, session, kwargs_json=None, requests_lib='requests', render=False,
-            return_response=False,
+            cls, url, method, session, kwargs_json=None, requests_lib='requests_html',
+            render=False, return_response=False,
             on_model_change_func=None, handle_view_exception=None, after_model_change_func=None):
         assert_msg = 'Unknown requests lib: {}'.format(requests_lib)
         assert requests_lib in ('requests', 'requests_html'), assert_msg
@@ -345,20 +345,15 @@ class Plugin(Base):
 
 
 def get_or_create_match_result(session, url, thumbnail_url=None, **kwargs):
-    model = MatchResult
     url_model = get_or_create(session, Url, value=url)[0]
     if not thumbnail_url:
-        instance, created = get_or_create(session, MatchResult, **kwargs)
+        instance, created = get_or_create(session, MatchResult, url=url_model, **kwargs)
         return instance, created
     thumbnail_url_model = get_or_create(session, Url, value=thumbnail_url)[0]
-    instance = session.query(model).filter_by(
-        url=url_model, thumnbail_url=thumbnail_url_model, **kwargs)
-    created = False
-    if instance:
-        return instance, created
-    instance = session.query(model).filter_by(**kwargs)
-    #  TODO
-    #  import pdb; pdb.set_trace()
+    instance, created = get_or_create(
+        session, MatchResult, url=url_model, thumbnail_url=thumbnail_url_model, **kwargs)
+    # NOTE may create redundant match result with empty thumbnail
+    return instance, created
 
 
 def get_or_create(session, model, **kwargs):
