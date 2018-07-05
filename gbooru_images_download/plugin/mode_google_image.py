@@ -1,3 +1,4 @@
+"""google image search."""
 from urllib.parse import urlparse, urlencode, parse_qs
 import json
 import requests
@@ -11,22 +12,7 @@ log = structlog.getLogger(__name__)
 
 
 def get_json_response(query, page=1):
-    """get json response
-
-    example query:
-
-      https://www.google.co.id/search?
-      asearch=ichunk
-      async=_id:rg_s,_pms:s,_fmt:pc
-      ei=v305W8erFZLe9QOG0amQBQ
-      ijn=1
-      q=ecchi
-      start=100
-      tbm=isch
-      ved=0ahUKEwiHh4T4n__bAhUSb30KHYZoClIQuT0ILygB
-      vet=10ahUKEwiHh4T4n__bAhUSb30KHYZoClIQuT0ILygB.v305W8erFZLe9QOG0amQBQ.i
-      yv=3
-    """
+    """get json response."""
     url_page = page - 1
     url_query = {
         'asearch': 'ichunk',
@@ -99,9 +85,44 @@ def get_match_results(json_response=None, session=None):
         yield
 
 
-class ParserPlugin(api.ModePlugin):
+class ModePlugin(api.ModePlugin):
+    """Base class for parser plugin."""
 
-    def get_match_results(self, search_term, page=1, session=None):
-        json_resp = get_json_response(query=search_term.value, page=page)
-        match_results = list(get_match_results(json_response=json_resp, session=session))
+    def get_match_results(
+            self, search_term=None, page=1, text=None, response=None, session=None, url=None):
+        parsed_url = urlparse('https://www.google.com/search')
+        url_query = {
+            'asearch': 'ichunk',
+            'async': '_id:rg_s,_pms:s,_fmt:pc',
+            'ijn': str(page - 1),
+            'q': search_term,
+            'start': str(int(page - 1) * 100),
+            'tbm': 'isch',
+            'yv': '3',
+        }
+        query_url = parsed_url._replace(query=urlencode(url_query)).geturl()
+        log.debug('query url', url=query_url)
+        resp_model = models.Response.create(query_url, method='get', session=session)
+        mr_dict = self.get_match_results_dict(
+            text=resp_model.text, session=session, url=search_term)
+        match_results = self.match_results_models_from_dict(mr_dict, session)
         return match_results
+
+    @classmethod
+    def get_match_results_dict(self, text=None, response=None, session=None, url=None):
+        text = '<style>{}'.format(text.split('<style>', 1)[1])
+        soup = BeautifulSoup(text, 'html.parser')
+        res = {'url': {}, 'tag': []}
+        rg_bx = soup.select('.rg_bx')
+        for html_tag in rg_bx:
+            rg_meta = json.loads(html_tag.select_one('div.rg_meta').text)
+            url_tags = [
+                ('gi {}'.format(key), str(value)) for key, value in rg_meta.items() if str(value)]
+            url = rg_meta['ou']
+            thumbnail = rg_meta['tu']
+            if url in res['url']:
+                res['url'][url]['tag'].extend(url_tags)
+                res['url'][url]['thumbnail'].append(thumbnail)
+            else:
+                res['url'][url] = {'thumbnail': [thumbnail], 'tag': url_tags}
+        return res
