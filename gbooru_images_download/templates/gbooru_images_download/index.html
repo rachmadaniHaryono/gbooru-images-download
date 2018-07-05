@@ -1,68 +1,12 @@
 {% extends 'admin/base.html' %}
 
-{% block head %}
-{{super()}}
-<link rel="shortcut icon" href="#" />
-{% endblock %}
-
 {% block body %}
 {{super()}}
 <form method="GET" action="/">
-  <div class="form-group"> {{ form.query.label }} {{ form.query(size=100, class_="form-control") }} </div>
-  <div class="form-group"> {{ form.mode.label }} {{ form.mode(class_="form-control")|safe}} </div>
-  <div class="checkbox"> <label>{{form.disable_cache(type='checkbox')}}{{form.disable_cache.label}}</label></div>
-  <button type="submit" class="btn btn-default">Submit</button>
+  <div class="form-group col-md-10"> {{ form.search_term.label }} {{ form.search_term(class_="form-control") }} </div>
+  <div class="form-group col-md-2"> {{ form.page.label }} {{ form.page(class_="form-control")}} </div>
+  <div class="form-group col-md-12"> {{ form.mode.label }} {{ form.mode(class_="form-control")}} </div>
+  <div class="checkbox col-md-12"> <label>{{form.disable_cache(type='checkbox')}}{{form.disable_cache.label}}</label></div>
+  <div class="col-md-12"> <button type="submit" class="btn btn-default">Submit</button> </div>
 </form>
-{% if entry.search_results|length > 1 %}
-{{pagination_section(info=False)}}
-{% endif %}
-<br>
-{% if entry %}<p> {{entry.match_results|length}} Results<br/> {% endif %}
-{% if entry.match_results|length != match_results|length %}{{match_results|length}} Shown</p>{% endif %}
-{{pagination_section(info=False)}}
-<div class="grid">
-  {% for match_result in match_results %}
-  <div class="grid-item col-xs-6 col-md-4">
-  <figure id="mr{{match_result.id}}">
-    <a class="thumb" href="{{url_for('u.index', u=match_result.img_url.value)}}">
-      <img class="img-responsive center-block" src="{{match_result.thumbnail_url.value}}">
-    </a>
-    <figcaption class="center-block">
-      <a class="btn btn-default btn-md"
-        href="{{match_result.value}}">{{match_result.img_url.width}}x{{match_result.img_url.height}}</a>
-      <a class="btn btn-default btn-md" href="{{url_for('f.index', url=match_result.img_url.url, search_type=1)}}">
-        <span class="fa fa-search glyphicon glyphicon-search"></span> similar
-      </a>
-      <a class="btn btn-default btn-md" href="{{url_for('f.index',
-        url=match_result.img_url.value, search_type=2)}}">
-        <span class="fa fa-search glyphicon glyphicon-search"></span> size
-      </a>
-      <button class="btn btn-default hide-btn btn-md" type="button" data-id="{{match_result.img_url.id}}"
-        data-mr-id="mr{{match_result.id}}">
-        <span class="fa fa-filter glyphicon glyphicon-filter"></span> filter
-      </button>
-    </figcaption>
-  </figure>
-  </div>
-{% endfor %}
-</div>
-<br>
-{{pagination_section(info=False)}}
 {% endblock body %}
-
-{% block tail_js %}
-{{super()}}
-<script src="{{url_for('static', filename="gbooru_images_download/imagesloaded.pkgd.min.js")}}" type="text/javascript"> </script>
-<script src="{{url_for('static', filename="gbooru_images_download/jquery.masonry.min.js")}}" type="text/javascript"> </script>
-<script src="{{url_for('static', filename="gbooru_images_download/index.js")}}" type="text/javascript"> </script>
-{% endblock %}
-
-{% macro pagination_section(info=True)%}
-  {% if info %} {{ pagination.info }} {% endif %}
-  {{ pagination.links }}
-  {% if query and not pagination.has_next and entry %}
-  <ul class="pagination">
-    <li class="next"><a href="{{url_for('admin.index', query=query, page=pagination.page+1)}}">load next page</a></li>
-  </ul>
-  {% endif %}
-{% endmacro %}
