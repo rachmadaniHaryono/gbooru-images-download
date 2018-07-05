@@ -1,13 +1,13 @@
 """Forms module."""
 from flask_wtf import FlaskForm
-from wtforms import StringField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Optional
+import wtforms
 
-from gbooru_images_download import models, api
+from gbooru_images_download import models
 
 
 def get_parser_choices():
-    manager = api.get_plugin_manager()
+    manager = models.get_plugin_manager()
     plugins = manager.getPluginsOfCategory('mode')
     res = []
     for pg in plugins:
@@ -15,21 +15,22 @@ def get_parser_choices():
     return res
 
 
-class IndexForm(FlaskForm):  # pylint: disable=too-few-public-methods
-    """Form for index."""
-    query = StringField('query', validators=[DataRequired()])
-    mode = SelectField('mode', choices=get_parser_choices())
-    disable_cache = BooleanField(validators=[Optional()])
-
-
 class FindImageForm(FlaskForm):
     """Form for getting result from file search."""
-    file_path = StringField('File Path', validators=[Optional()])
-    url = StringField('URL', validators=[Optional()])
-    search_type = SelectField('Search Type', validators=[Optional()], choices=models.SearchImagePage.TYPES)  # NOQA
-    disable_cache = BooleanField(validators=[Optional()])
+    file_path = wtforms.StringField('File Path', validators=[Optional()])
+    url = wtforms.StringField('URL', validators=[Optional()])
+    search_type = wtforms.SelectField('Search Type', validators=[Optional()], choices=models.SearchImagePage.TYPES)  # NOQA
+    disable_cache = wtforms.BooleanField(validators=[Optional()])
+
+
+class IndexForm(FlaskForm):  # pylint: disable=too-few-public-methods
+    """Form for index."""
+    search_term = wtforms.StringField('search term', validators=[DataRequired()])
+    mode = wtforms.SelectField('mode', choices=get_parser_choices())
+    page = wtforms.IntegerField('page', default=1)
+    disable_cache = wtforms.BooleanField(validators=[Optional()])
 
 
 class ResponseParserForm(FlaskForm):
-    response = SelectField()
-    parser = SelectField()
+    response = wtforms.SelectField()
+    parser = wtforms.SelectField()
