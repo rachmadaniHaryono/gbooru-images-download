@@ -53,6 +53,7 @@ class HomeView(AdminIndexView):
         template_kwargs = {'entry': None, 'query': query, 'form': form, }
         pagination_kwargs = {'page': page, 'show_single_page': False, 'bs_version': 3, }
         if query:
+            # TODO
             session = models.db.session
             model, created = api.get_or_create_search_query(
                 query, page, disable_cache=disable_cache, session=session)
@@ -73,9 +74,13 @@ class HomeView(AdminIndexView):
         """View for single image url."""
         url = request.args.get('u', None)
         session = models.db.session
-        entry = models.get_or_create(session, models.Url, value=url)[0]
+        entry, created = models.get_or_create(session, models.Url, value=url)
+        if created:
+            session.add(entry)
+            session.commit()
         if not entry.id:
-            return self.render('gbooru_images_download/image_url_view.html', entry=None)
+            flash(gettext('Url id error.'), 'error')
+            return redirect(url_for('admin.index'))
         return redirect(url_for('url.details_view', id=entry.id))
 
 
@@ -476,28 +481,13 @@ class SearchQueryView(ModelView):
     form_excluded_columns = ['created_at', 'match_results']
 
     def create_model(self, form):
-        try:
-            model = self.model()
-            form.populate_obj(model)
-            # plugin.get_match_results(search_term, page, session)
-            assert model.mode.category == 'mode'
-            pm = api.get_plugin_manager()
-            plugin = pm.getPluginByName(model.mode.name, model.mode.category)
-            mrs = list(set(plugin.plugin_object.get_match_results(
-                search_term=model.search_term, page=model.page, session=self.session)))
-            model.match_results.extend(mrs)
-            self.session.add(model)
-            self._on_model_change(form, model, True)
-            self.session.commit()
-        except Exception as ex:
-            if not self.handle_view_exception(ex):
-                flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
-                log.exception('Failed to create record.')
-            self.session.rollback()
-            return False
-        else:
-            self.after_model_change(form, model, True)
-        return model
+        res = self.model.create(
+            form=form, session=self.session,
+            on_model_change_func=self._on_model_change,
+            handle_view_exception=self.handle_view_exception,
+            after_model_change_func=self.after_model_change
+        )
+        return res
 
 
 class UrlView(ModelView):
