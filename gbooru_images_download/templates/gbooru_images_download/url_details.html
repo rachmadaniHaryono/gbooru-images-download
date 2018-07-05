@@ -1,6 +1,43 @@
 {% extends 'admin/model/details.html' %}
 {% block details_table %}
 {{super()}}
-<ul> {% for tag in model.tags %} <li>{{tag.as_string}}</li> {% endfor %} </ul>
+<div>
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#tags_main" role="tab" data-toggle="tab">Tags</a></li>
+    <li role="presentation"><a href="#tags_all" role="tab" data-toggle="tab">Tags (all)</a></li>
+  </ul>
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="tags_main">
+      <table class="table table-condensed table-bordered">
+        <thead> <tr> <th>Namespace</th> <th>Value</th> </tr> </thead>
+        <tbody>
+          {% for tag in model.tags | sort(attribute='namespace_value')%}
+          {% if tag.namespace and not tag.namespace.hidden %}
+            <tr>
+              <td>{{tag.namespace_value}}</td>
+              <td>{{tag.value}}</td>
+            </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div role="tabpanel" class="tab-pane" id="tags_all">
+      <table class="table table-condensed table-bordered">
+        <thead> <tr> <th>Namespace</th> <th>Value</th> </tr> </thead>
+        <tbody>
+          {% for tag in model.tags | sort(attribute='namespace_value')%}
+            <tr>
+              <td>{{tag.namespace_value}}</td>
+              <td>{{tag.value}}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
