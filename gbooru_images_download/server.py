@@ -211,7 +211,8 @@ def create_app(script_info=None):
     app_admin.add_view(views.UrlView(models.Url, models.db.session, category='History'))
     app_admin.add_view(views.NetlocView(models.Netloc, models.db.session, category='History'))
     app_admin.add_view(admin.TagView(models.Tag, models.db.session, category='History'))
-    app_admin.add_view(views.NamespaceView(models.Namespace, models.db.session, category='History'))
+    app_admin.add_view(
+        views.NamespaceView(models.Namespace, models.db.session, category='History'))
     app_admin.add_view(admin.MainSimilarResultView(models.MainSimilarResult, models.db.session, category='History'))  # NOQA
     app_admin.add_view(ModelView(models.NamespaceHtmlClass, models.db.session, category='History'))  # NOQA
     app_admin.add_view(views.ResponseView(models.Response, models.db.session, category='History'))
