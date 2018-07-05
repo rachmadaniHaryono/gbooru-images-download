@@ -9,8 +9,6 @@ import tempfile
 
 from bs4 import BeautifulSoup
 from PIL import Image
-from yapsy.IPlugin import IPlugin
-from yapsy.PluginManager import PluginManager
 import requests
 import structlog
 try:
@@ -22,6 +20,7 @@ except ImportError:
 
 import gbooru_images_download as gid
 from . import models, exceptions, plugin
+from .models import get_plugin_manager, ModePlugin  # NOQA
 
 log = structlog.getLogger(__name__)
 
@@ -51,17 +50,6 @@ def sha256_checksum(filename, block_size=65536):
         for block in iter(lambda: file_path.read(block_size), b''):
             sha256.update(block)
     return sha256.hexdigest()
-
-
-def get_plugin_manager():
-    manager = PluginManager(plugin_info_ext='ini')
-    manager.setCategoriesFilter({
-        'tag_preprocessor': TagPreProcessor,
-        'mode': ModePlugin,
-    })
-    manager.setPluginPlaces([plugin.__path__[0]])
-    manager.collectPlugins()
-    return manager
 
 
 def get_json_response(query, page=1):
@@ -583,81 +571,3 @@ def create_thumbnail(file_path, thumbnail_folder):
         if not os.path.isfile(thumbnail_path):
             shutil.copyfile(temp.name, thumbnail_path)
         return thumbnail_path
-
-
-class ModePlugin(IPlugin):
-    """Base class for parser plugin."""
-
-    def get_match_results(
-            self, search_term=None, page=1, text=None, response=None, session=None, url=None):
-        """Get match result models.
-
-        - search_term and page
-        - text or response or both
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def get_match_results_dict(self, text=None, response=None, session=None, url=None):
-        """main function used for plugin.
-
-        Returns:
-            dict: match results data
-
-        Examples:
-            get match results dict.
-
-            >>> print(ParserPlugin.get_match_results_dict(text=text)
-            {
-                'url': {
-                    'http:example.com/1.html': {
-                        'thumbnail': [
-                            'http:example.com/1.jpg',
-                            'http:example.com/1.png',
-                            ...
-                        ],
-                        'tag': [
-                            (None, 'tag_value1'),
-                            ('namespace1', 'tag_value2', ...)
-                        ],
-                    },
-                    ...
-                },
-                'tag': [(None, 'tag_value3'), ('namespace2', 'tag_value4'), ...]
-            }
-        """
-        return {}
-
-    @classmethod
-    def match_results_models_from_dict(cls, dict_input, session):
-        if dict_input['tag']:
-            pass
-        for url, data in dict_input['url'].items():
-            tag_models = []
-            for nm, tag_value in data['tag']:
-                #  tag_model = models.get_or_create_tag()
-                if nm:
-                    nm_model = models.get_or_create(session, models.Namespace, value=nm)[0]
-                    tag_models.append(models.get_or_create(
-                        session, models.Tag, value=tag_value, namespace=nm_model)[0])
-                else:
-                    tag_models.append(models.get_or_create(
-                        session, models.Tag, value=tag_value, namespace=None)[0])
-                pass
-            mr_model = None
-            if data['thumbnail']:
-                for tu in data['thumbnail']:
-                    mr_model = models.get_or_create_match_result(
-                        session, url=url, thumbnail_url=tu)[0]
-                    yield mr_model
-            else:
-                mr_model = models.get_or_create_match_result(session, url=url)[0]
-                yield mr_model
-            mr_model.url.tags.extend(tag_models)
-
-
-class TagPreProcessor(IPlugin):
-    """Base class for parser plugin."""
-
-    def run_tag_preprocessor(self, tags):
-        pass

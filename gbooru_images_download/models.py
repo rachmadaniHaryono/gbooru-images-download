@@ -5,16 +5,20 @@ from urllib.parse import urlparse
 import json
 import os
 
-from requests_html import HTMLSession
 from flask import flash
 from flask_admin.babel import gettext
 from flask_sqlalchemy import SQLAlchemy
+from requests_html import HTMLSession
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import attributes as orm_attributes, relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import ChoiceType, JSONType, ScalarListType, URLType
+from yapsy.IPlugin import IPlugin
+from yapsy.PluginManager import PluginManager
 import requests
 import structlog
+
+from . import plugin
 
 
 log = structlog.getLogger(__name__)
@@ -90,6 +94,36 @@ class SearchQuery(Base):
         templ = \
             '<SearchQuery:{0.id} q:[{0.search_term}] p:{0.page} mode:{1}>'
         return templ.format(self, self.mode.name if self.mode else '')
+
+    @classmethod
+    def create(
+            cls, form, session,
+            on_model_change_func=None, handle_view_exception=None, after_model_change_func=None
+    ):
+        try:
+            model = get_or_create(
+                session, SearchQuery,
+                search_term=form.search_term.data, page=form.page.data, 
+                mode=form.mode.data
+            )[0]
+            pm = get_plugin_manager()
+            plugin = pm.getPluginByName(model.mode.name, model.mode.category)
+            mrs = list(set(plugin.plugin_object.get_match_results(
+                search_term=model.search_term, page=model.page, session=session)))
+            model.match_results.extend(mrs)
+            session.add(model)
+            if on_model_change_func:
+                on_model_change_func(form, model, True)
+            session.commit()
+        except Exception as ex:
+            if handle_view_exception and handle_view_exception(ex):
+                flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
+                log.exception('Failed to create record.')
+            session.rollback()
+            return False
+        else:
+            after_model_change_func(form, model, True)
+        return model
 
 
 class MatchResult(Base):
@@ -371,3 +405,86 @@ def get_or_create(session, model, **kwargs):
         session.add(instance)
         created = True
     return instance, created
+
+# ## plugin
+
+
+def get_plugin_manager():
+    manager = PluginManager(plugin_info_ext='ini')
+    manager.setCategoriesFilter({
+        'mode': ModePlugin,
+    })
+    manager.setPluginPlaces([plugin.__path__[0]])
+    manager.collectPlugins()
+    return manager
+
+
+class ModePlugin(IPlugin):
+    """Base class for parser plugin."""
+
+    def get_match_results(
+            self, search_term=None, page=1, text=None, response=None, session=None, url=None):
+        """Get match result models.
+
+        - search_term and page
+        - text or response or both
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def get_match_results_dict(self, text=None, response=None, session=None, url=None):
+        """main function used for plugin.
+
+        Returns:
+            dict: match results data
+
+        Examples:
+            get match results dict.
+
+            >>> print(ParserPlugin.get_match_results_dict(text=text)
+            {
+                'url': {
+                    'http:example.com/1.html': {
+                        'thumbnail': [
+                            'http:example.com/1.jpg',
+                            'http:example.com/1.png',
+                            ...
+                        ],
+                        'tag': [
+                            (None, 'tag_value1'),
+                            ('namespace1', 'tag_value2', ...)
+                        ],
+                    },
+                    ...
+                },
+                'tag': [(None, 'tag_value3'), ('namespace2', 'tag_value4'), ...]
+            }
+        """
+        return {}
+
+    @classmethod
+    def match_results_models_from_dict(cls, dict_input, session):
+        if dict_input['tag']:
+            pass
+        for url, data in dict_input['url'].items():
+            tag_models = []
+            for nm, tag_value in data['tag']:
+                #  tag_model = models.get_or_create_tag()
+                if nm:
+                    nm_model = get_or_create(session, Namespace, value=nm)[0]
+                    tag_models.append(get_or_create(
+                        session, Tag, value=tag_value, namespace=nm_model)[0])
+                else:
+                    tag_models.append(get_or_create(
+                        session, Tag, value=tag_value, namespace=None)[0])
+                pass
+            mr_model = None
+            if data['thumbnail']:
+                for tu in data['thumbnail']:
+                    mr_model = get_or_create_match_result(
+                        session, url=url, thumbnail_url=tu)[0]
+                    yield mr_model
+            else:
+                mr_model = get_or_create_match_result(session, url=url)[0]
+                yield mr_model
+            mr_model.url.tags.extend(tag_models)
