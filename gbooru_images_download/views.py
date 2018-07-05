@@ -73,8 +73,7 @@ class HomeView(AdminIndexView):
         """View for single image url."""
         url = request.args.get('u', None)
         session = models.db.session
-        entry = models.get_or_create_url(session=session, value=url)[0]
-        session.commit()
+        entry = models.get_or_create(session, models.Url, value=url)[0]
         if not entry.id:
             return self.render('gbooru_images_download/image_url_view.html', entry=None)
         return redirect(url_for('url.details_view', id=entry.id))
@@ -259,7 +258,8 @@ class ResponseView(ModelView):
             model=model,
             form=form,
             parser_model=parser_model,
-            parser_result=pformat(parser_result, width=120),
+            parser_result_text=pformat(parser_result, width=120),
+            parser_result=parser_result,
         )
 
 
@@ -352,7 +352,12 @@ class MatchResultView(ModelView):
 
     def _url_formatter(self, context, model, name):
         data = getattr(model, name)
-        res = '(ID:{}) '.format(data.id)
+        res = '(ID:{})'.format(data.id)
+        res += Markup(' <a class="{1}" href="{0}">{2}</a> '.format(
+            url_for('admin.url_redirect', u=model.url.value),
+            "btn btn-default",
+            "detail"
+        ))
         res += url_formatter(self, context, model, name)
         return res
 
@@ -464,7 +469,7 @@ class SearchQueryView(ModelView):
             pm = api.get_plugin_manager()
             plugin = pm.getPluginByName(model.mode.name, model.mode.category)
             mrs = list(set(plugin.plugin_object.get_match_results(
-                model.search_term, model.page, self.session)))
+                search_term=model.search_term, page=model.page, session=self.session)))
             model.match_results.extend(mrs)
             self.session.add(model)
             self._on_model_change(form, model, True)
@@ -505,6 +510,7 @@ class UrlView(ModelView):
     }
     column_list = ('created_at', 'id', 'value', 'content_type')
     column_searchable_list = ('value', )
+    details_template = 'gbooru_images_download/url_details.html'
     form_edit_rules = [
         rules.FieldSet(('value', 'tags'), 'Url'),
         rules.FieldSet(('match_results', 'thumbnail_match_results'), 'Match Result'),
