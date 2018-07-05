@@ -88,8 +88,8 @@ class SearchQuery(Base):
 
     def __repr__(self):
         templ = \
-            '<SearchQuery:{0.id} q:[{0.search_term}] p:{0.page} {0.mode.name}>'
-        return templ.format(self)
+            '<SearchQuery:{0.id} q:[{0.search_term}] p:{0.page} mode:{1}>'
+        return templ.format(self, self.mode.name if self.mode else '')
 
 
 class MatchResult(Base):
