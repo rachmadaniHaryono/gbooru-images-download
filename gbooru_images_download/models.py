@@ -122,7 +122,8 @@ class SearchQuery(Base):
             session.rollback()
             return False
         else:
-            after_model_change_func(form, model, True)
+            if after_model_change_func:
+                after_model_change_func(form, model, True)
         return model
 
 
