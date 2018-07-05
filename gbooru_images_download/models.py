@@ -143,10 +143,20 @@ class Tag(SingleStringModel):
         backref=db.backref('tags', lazy=True, cascade='delete'))
     hidden = db.Column(db.Boolean, default=False)
 
+    def __repr__(self):
+        templ = '<Tag:{0.id} {0.as_string}>'
+        return templ.format(self)
+
     @property
     def as_string(self):
         nm = '{}:'.format(self.namespace.value) if self.namespace else ''
         return ''.join([nm, self.value])
+
+    @property
+    def namespace_value(self):
+        if self.namespace:
+            return self.namespace.value
+        return ''
 
     def get_html_class(self):
         if not self.namespace:
@@ -156,10 +166,6 @@ class Tag(SingleStringModel):
         if self.namespace.html_class:
             return val + ' ' + ' '.join([x.value for x in self.html_class])
         return val
-
-    def __repr__(self):
-        templ = '<Tag:{0.id} {0.as_string}>'
-        return templ.format(self)
 
 
 class SearchImage(Base):
