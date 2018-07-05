@@ -359,11 +359,21 @@ class MatchResultView(ModelView):
             "detail"
         ))
         res += url_formatter(self, context, model, name)
+        if not model.thumbnail_url:
+            return res
+        res = Markup('<div {}"><img {} src="{}"></div><div {}>{}</div>'.format(
+            'class="col-md-2"',
+            'style="max-width:100%"',
+            model.thumbnail_url.value,
+            'class="col-md-10"',
+            res
+        ))
         return res
 
     can_view_details = True
     can_set_page_size = True
     column_default_sort = ('created_at', True)
+    column_exclude_list = ('thumbnail_url', )
     column_filters = [
         'created_at',
         'search_queries',
@@ -505,7 +515,9 @@ class UrlView(ModelView):
     ]
     column_formatters = {
         'created_at': date_formatter,
-        'value': lambda v, c, m, p: Markup('<a href="{0}">{0}</a>'.format(getattr(m, p))),
+        'value': lambda v, c, m, p: Markup('<a {1} href="{0}">{0}</a>'.format(
+            getattr(m, p), 'id="source-url"'
+        )),
         'content_type': _content_type_formatter,
     }
     column_list = ('created_at', 'id', 'value', 'content_type')
