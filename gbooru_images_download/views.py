@@ -380,12 +380,12 @@ class MatchResultView(ModelView):
         res += url_formatter(self, context, model, name)
         if not model.thumbnail_url:
             return res
-        res = Markup('<div {}"><img {} src="{}"></div><div {}>{}</div>'.format(
+        res = Markup('<div {0}"><img {1} src="{2}"></div><div {3}>{4}</div>'.format(
             'class="col-md-2"',
             'style="max-width:100%"',
             model.thumbnail_url.value,
             'class="col-md-10"',
-            res
+            '<span style="word-wrap:break-word">{}</span>'.format(res)
         ))
         return res
 
