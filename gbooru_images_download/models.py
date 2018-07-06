@@ -103,8 +103,7 @@ class SearchQuery(Base):
         try:
             model = get_or_create(
                 session, SearchQuery,
-                search_term=form.search_term.data, page=form.page.data, 
-                mode=form.mode.data
+                search_term=form.search_term.data, page=form.page.data, mode=form.mode.data
             )[0]
             pm = get_plugin_manager()
             plugin = pm.getPluginByName(model.mode.name, model.mode.category)
@@ -151,10 +150,18 @@ class MatchResult(Base):
 class Namespace(Base):
     """Namespace model."""
     value = db.Column(db.String, unique=True, nullable=False)
+    alias = db.Column(db.String)
     hidden = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return '<Namespace:{0.id} {0.value}>'.format(self)
+
+    @hybrid_property
+    def tag_count(self):
+        try:
+            return len(self.tags) if self.tags else 0
+        except TypeError:
+            return 0
 
 
 class Netloc(Base):
@@ -176,6 +183,7 @@ class Tag(SingleStringModel):
     namespace = db.relationship(
         'Namespace', foreign_keys='Tag.namespace_id', lazy='subquery',
         backref=db.backref('tags', lazy=True, cascade='delete'))
+    alias = db.Column(db.String)
     hidden = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
@@ -189,7 +197,9 @@ class Tag(SingleStringModel):
 
     @property
     def namespace_value(self):
-        if self.namespace:
+        if self.namespace and self.namespace.alias:
+            return self.namespace.alias
+        elif self.namespace:
             return self.namespace.value
         return ''
 
