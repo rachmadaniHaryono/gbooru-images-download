@@ -94,13 +94,14 @@ class HomeView(AdminIndexView):
 
 class NamespaceView(ModelView):
 
-    column_editable_list = ('hidden', )
-    column_list = ('created_at', 'value', 'hidden', 'tag')
-    column_formatters = {
-        'created_at': date_formatter,
-        'tag': lambda v, c, m, p:
-        len(m.tags) if m.tags else 0,
-    }
+    column_editable_list = ('hidden', 'alias')
+    column_list = ('created_at', 'hidden', 'value', 'alias', 'tag_count')
+    column_filters = [
+        'created_at',
+        'value',
+        'hidden',
+    ]
+    column_formatters = {'created_at': date_formatter, }
 
 
 class ResponseView(ModelView):
