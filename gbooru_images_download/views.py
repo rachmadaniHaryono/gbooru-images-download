@@ -11,7 +11,6 @@ from flask_admin.contrib.sqla import ModelView
 from flask_admin.form import rules
 from flask_admin.helpers import get_redirect_target
 from flask_admin.model.helpers import get_mdict_item_or_list
-from flask_paginate import get_page_parameter, Pagination
 from jinja2 import Markup, contextfunction
 from sqlalchemy.sql.expression import desc
 from wtforms import fields, validators
@@ -96,6 +95,12 @@ class HomeView(AdminIndexView):
 class NamespaceView(ModelView):
 
     column_editable_list = ('hidden', )
+    column_list = ('created_at', 'value', 'hidden', 'tag')
+    column_formatters = {
+        'created_at': date_formatter,
+        'tag': lambda v, c, m, p:
+        len(m.tags) if m.tags else 0,
+    }
 
 
 class ResponseView(ModelView):
