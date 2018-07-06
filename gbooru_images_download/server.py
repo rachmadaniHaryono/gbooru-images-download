@@ -7,7 +7,7 @@ import shutil
 import tempfile
 
 from appdirs import user_data_dir
-from flask import Flask, request, flash, jsonify, redirect, url_for
+from flask import Flask, request, flash, jsonify, redirect
 from flask.cli import FlaskGroup
 from flask.views import View
 from flask_admin import Admin, BaseView, expose
@@ -175,22 +175,14 @@ def create_app(script_info=None):
         app.jinja_env.auto_reload = True
     # app config
     database_path = 'gid_debug.db'
-    database_exist = os.path.isfile(database_path)
     database_uri = 'sqlite:///' + database_path
     app.config['SQLALCHEMY_DATABASE_URI'] = \
         os.getenv('GID_SQLALCHEMY_DATABASE_URI') or database_uri # NOQA
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('GID_SERVER_SECRET_KEY') or os.urandom(24)
     app.config['WTF_CSRF_ENABLED'] = False
-    # debug
-    debug = app.config['DEBUG'] = bool(os.getenv('GID_DEBUG')) or app.config['DEBUG']
-    if debug:
-        app.config['DEBUG'] = True
-        app.config['LOGGER_HANDLER_POLICY'] = 'debug'
-        logging.basicConfig(level=logging.DEBUG)
-        # pprint.pprint(app.config)
-        print('Log file: {}'.format(default_log_file))
-        print('DB uri: {}'.format(app.config['SQLALCHEMY_DATABASE_URI']))
+    print('Log file: {}'.format(default_log_file))
+    print('DB uri: {}'.format(app.config['SQLALCHEMY_DATABASE_URI']))
     # app and db
     models.db.init_app(app)
     app.app_context().push()
