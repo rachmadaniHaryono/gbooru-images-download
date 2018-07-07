@@ -2,6 +2,7 @@
 {% block details_table %}
 {{super()}}
 <div>
+  <div class="hidden"><a href="{{model.value}}">post-url</a></div>
   <!-- Nav tabs -->
   <ul class="nav nav-tabs" role="tablist">
     <li role="presentation" class="active"><a href="#tags_main" role="tab" data-toggle="tab">Tags</a></li>
@@ -16,8 +17,11 @@
           {% for tag in model.tags | sort(attribute='namespace_value')%}
           {% if tag.namespace and not tag.namespace.hidden %}
             <tr>
-              <td>{{tag.namespace_value}}</td>
-              <td>{{tag.value}}</td>
+              <td> {{tag.namespace_value}} </td>
+              <td>
+                <div class="tag-{{tag.namespace_value|replace(' ', '-')}}">{{tag.value}}</div>
+                <div class="hydrus-tag hidden">{{tag.as_string}}</div>
+              </td>
             </tr>
           {% endif %}
           {% endfor %}

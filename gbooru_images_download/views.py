@@ -382,7 +382,7 @@ class MatchResultView(ModelView):
             data.id,
             Markup('<a class="{1}" href="{0}">{2}</a>'.format(
                 url_for('admin.url_redirect', u=model.url.value),
-                "btn btn-default",
+                "btn view-details-btn btn-default",
                 "detail"
             )),
             Markup('<a class="{1}" href="{0}">{2}</a>'.format(
@@ -391,7 +391,7 @@ class MatchResultView(ModelView):
                 "edit"
             )),
             Markup('<a href="{}">{}</a> ({})'.format(
-                data, basename(data.value.path.segments[-1]), data.value.host
+                data.value, basename(data.value.path.segments[-1]), data.value.host
             )),
         )
         if not model.thumbnail_url:
