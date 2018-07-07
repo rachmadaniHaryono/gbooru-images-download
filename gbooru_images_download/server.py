@@ -190,7 +190,7 @@ def create_app(script_info=None):
 
     @app.shell_context_processor
     def shell_context():
-        return {'app': app, 'db': models.db, 'models': models}
+        return {'app': app, 'db': models.db, 'models': models, 'session': models.db.session}
 
     Migrate(app, models.db)
     # flask-admin
