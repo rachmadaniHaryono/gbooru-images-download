@@ -1,4 +1,5 @@
 from functools import partial
+from os.path import basename
 from pprint import pformat
 from urllib.parse import unquote, urlparse
 import json
@@ -377,13 +378,22 @@ class MatchResultView(ModelView):
 
     def _url_formatter(self, context, model, name):
         data = getattr(model, name)
-        res = '(ID:{})'.format(data.id)
-        res += Markup(' <a class="{1}" href="{0}">{2}</a> '.format(
-            url_for('admin.url_redirect', u=model.url.value),
-            "btn btn-default",
-            "detail"
-        ))
-        res += url_formatter(self, context, model, name)
+        res = '(ID:{}) {} {} {}'.format(
+            data.id,
+            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
+                url_for('admin.url_redirect', u=model.url.value),
+                "btn btn-default",
+                "detail"
+            )),
+            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
+                url_for('url.edit_view', id=model.id),
+                "btn btn-default",
+                "edit"
+            )),
+            Markup('<a href="{}">{}</a> ({})'.format(
+                data, basename(data.value.path.segments[-1]), data.value.host
+            )),
+        )
         if not model.thumbnail_url:
             return res
         res = Markup('<div {0}"><img {1} src="{2}"></div><div {3}>{4}</div>'.format(
