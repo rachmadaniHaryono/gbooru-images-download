@@ -19,7 +19,7 @@ except ImportError:
     SELENIUM_ENABLED = False
 
 import gbooru_images_download as gid
-from . import models, exceptions, plugin
+from . import models, exceptions
 from .models import get_plugin_manager, ModePlugin  # NOQA
 
 log = structlog.getLogger(__name__)
