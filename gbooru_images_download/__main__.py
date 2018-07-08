@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
 """Server module."""
 from logging.handlers import TimedRotatingFileHandler
-from urllib.parse import unquote_plus
 import logging
 import os
-import shutil
-import tempfile
 
 from appdirs import user_data_dir
-from flask import Flask, request, flash, jsonify
+from flask import Flask
 from flask.cli import FlaskGroup
-from flask.views import View
-from flask_admin import Admin, BaseView, expose
+from flask_admin import Admin
 from flask_admin._compat import text_type
 from flask_admin.contrib.sqla import fields
 from flask_migrate import Migrate
@@ -22,7 +18,7 @@ import structlog
 # from flask_restful import Api, Resource
 # from flasgger import Swagger
 
-from gbooru_images_download import models, admin, api, views
+from gbooru_images_download import models, views
 
 
 log = structlog.getLogger(__name__)
@@ -90,7 +86,7 @@ def create_app(script_info=None):
     app_admin.add_view(views.UrlView(models.Url, models.db.session, category=category_manage))
     app_admin.add_view(views.NetlocView(models.Netloc, models.db.session, category=category_manage))  # NOQA
     app_admin.add_view(views.NamespaceView(models.Namespace, models.db.session, category=category_manage))  # NOQA
-    app_admin.add_view(admin.TagView(models.Tag, models.db.session, category=category_manage))
+    app_admin.add_view(views.TagView(models.Tag, models.db.session, category=category_manage))
     app_admin.add_view(views.ResponseView(models.Response, models.db.session, category=category_manage))  # NOQA
     app_admin.add_view(views.PluginView(models.Plugin, models.db.session))
     return app

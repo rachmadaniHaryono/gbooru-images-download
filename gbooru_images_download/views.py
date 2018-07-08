@@ -105,6 +105,190 @@ class NamespaceView(ModelView):
     column_formatters = {'created_at': date_formatter, }
 
 
+class MatchResultView(ModelView):
+
+    def _order_by(self, query, joins, sort_joins, sort_field, sort_desc):
+        try:
+            res = super()._order_by(query, joins, sort_joins, sort_field, sort_desc)
+        except AttributeError as e:
+            if sort_field.key not in ('url', 'thumbnail_url'):
+                log.error('{}'.format(e), sort_field_key=sort_field.key)
+                raise e
+            if sort_field is not None:
+                # Handle joins
+                query, joins, alias = self._apply_path_joins(
+                    query, joins, sort_joins, inner_join=False)
+                try:
+                    field = getattr(self.model, sort_field.key)
+                    if sort_desc:
+                        query = query.join(models.Url, field).order_by(desc(models.Url.value))
+                    else:
+                        query = query.join(models.Url, field).order_by(models.Url.value)
+                except Exception as e:
+                    raise e
+            return query, joins
+        return res
+
+    def _url_formatter(self, context, model, name):
+        data = getattr(model, name)
+        res = '(ID:{}) {} {} {}'.format(
+            data.id,
+            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
+                url_for('admin.url_redirect', u=model.url.value),
+                "btn view-details-btn btn-default",
+                "detail"
+            )),
+            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
+                url_for('url.edit_view', id=model.id),
+                "btn btn-default",
+                "edit"
+            )),
+            Markup('<a href="{}">{}</a> ({})'.format(
+                data.value, basename(data.value.path.segments[-1]), data.value.host
+            )),
+        )
+        if not model.thumbnail_url:
+            return res
+        res = Markup('<div {0}"><img {1} src="{2}"></div><div {3}>{4}</div>'.format(
+            'class="col-md-2"',
+            'style="max-width:100%"',
+            model.thumbnail_url.value,
+            'class="col-md-10"',
+            '<span style="word-wrap:break-word">{}</span>'.format(res)
+        ))
+        return res
+
+    can_view_details = True
+    can_set_page_size = True
+    column_default_sort = ('created_at', True)
+    column_exclude_list = ('thumbnail_url', )
+    column_filters = [
+        'created_at',
+        'search_queries',
+        'tags',
+        'thumbnail_url',
+        'url',
+    ]
+    column_formatters = {
+        'created_at': date_formatter,
+        'thumbnail_url': url_formatter,
+        'url': _url_formatter,
+    }
+    column_sortable_list = ('created_at', 'url', 'thumbnail_url')
+    named_filter_urls = True
+    page_size = 100
+
+    def create_model(self, form):
+        try:
+            models.get_or_create_match_result(
+                self.session, url=form.url, thumbnail_url=form.thumbnail_url)
+            model = self.model()
+            form.populate_obj(model)
+            # plugin.get_match_results(search_term, page, session)
+            assert model.mode.category == 'mode'
+            pm = api.get_plugin_manager()
+            plugin = pm.getPluginByName(model.mode.name, model.mode.category)
+            mrs = list(set(plugin.plugin_object.get_match_results(
+                model.search_term, model.page, self.session)))
+            model.match_results = mrs
+            self.session.add(model)
+            self._on_model_change(form, model, True)
+            self.session.commit()
+        except Exception as ex:
+            if not self.handle_view_exception(ex):
+                flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
+                log.exception('Failed to create record.')
+            self.session.rollback()
+            return False
+        else:
+            self.after_model_change(form, model, True)
+        return model
+
+
+class NetlocView(ModelView):
+    can_create = False
+    can_edit = False
+    can_set_page_size = True
+    column_editable_list = ('hidden', )
+    column_formatters = {'created_at': date_formatter}
+    edit_modal = True
+    form_columns = ('hidden', )
+    form_excluded_columns = ['created_at', ]
+    page_size = 100
+
+    def get_list(self, page, sort_field, sort_desc, search, filters, page_size=None):
+        query = self.session.query(models.Url.value).distinct()
+        for item in query:
+            n_model = models.get_or_create(self.session, self.model, value=item[0].netloc)[0]
+            self.session.add(n_model)
+        self.session.commit()
+        res = super().get_list(page, sort_field, sort_desc, search, filters, page_size=None)
+        return res
+
+
+class PluginView(ModelView):
+
+    can_edit = False
+    can_create = False
+    can_view_details = True
+    column_default_sort = ('created_at', True)
+    column_filters = [
+        'category',
+        'created_at',
+        'description',
+        'name',
+        'version',
+    ]
+    column_formatters = {
+        'created_at': date_formatter,
+        'website': lambda v, c, m, p: Markup(
+            '<a href="{0}">{0}</a>'.format(getattr(m, p))
+        ),
+        'path': lambda v, c, m, p: Markup(
+            '<pre style="{1}">{0}</pre>'.format(
+                getattr(m, p),
+                ' '.join([
+                    'white-space: pre-wrap;',
+                    'white-space: -moz-pre-wrap;',
+                    'white-space: -pre-wrap;',
+                    'white-space: -o-pre-wrap;',
+                    'word-wrap: break-word;',
+                ])
+            )
+        ),
+        'category': lambda v, c, m, p: Markup(
+            '<a href="{}">{}</a>'.format(
+                url_for('plugin.index_view', flt2_2=getattr(m, p)),
+                getattr(m, p)
+            )
+        ),
+    }
+    column_list = ('created_at', 'name', 'version', 'category', 'description')
+    details_modal = True
+    list_template = 'gbooru_images_download/plugin_list.html'
+
+    @expose('/update')
+    def index_update_view(self):
+        return_url = get_redirect_target() or self.get_url('.index_view')
+        manager = api.get_plugin_manager()
+        keys = [
+            'name', 'version', 'description', 'author', 'website', 'copyright',
+            'categories', 'category']
+        for plugin in manager.getAllPlugins():
+            with self.session.no_autoflush:
+                model = models.get_or_create(self.session, self.model, path=plugin.path)[0]
+            #  update record
+            for key in keys:
+                if getattr(plugin, key):
+                    if key == 'version':
+                        setattr(model, key, str(getattr(plugin, key)))
+                    else:
+                        setattr(model, key, getattr(plugin, key))
+            self.session.add(model)
+        self.session.commit()
+        return redirect(return_url)
+
+
 class ResponseView(ModelView):
 
     def _text_formatter(self, context, model, name):
@@ -289,190 +473,6 @@ class ResponseView(ModelView):
         )
 
 
-class PluginView(ModelView):
-
-    can_edit = False
-    can_create = False
-    can_view_details = True
-    column_default_sort = ('created_at', True)
-    column_filters = [
-        'category',
-        'created_at',
-        'description',
-        'name',
-        'version',
-    ]
-    column_formatters = {
-        'created_at': date_formatter,
-        'website': lambda v, c, m, p: Markup(
-            '<a href="{0}">{0}</a>'.format(getattr(m, p))
-        ),
-        'path': lambda v, c, m, p: Markup(
-            '<pre style="{1}">{0}</pre>'.format(
-                getattr(m, p),
-                ' '.join([
-                    'white-space: pre-wrap;',
-                    'white-space: -moz-pre-wrap;',
-                    'white-space: -pre-wrap;',
-                    'white-space: -o-pre-wrap;',
-                    'word-wrap: break-word;',
-                ])
-            )
-        ),
-        'category': lambda v, c, m, p: Markup(
-            '<a href="{}">{}</a>'.format(
-                url_for('plugin.index_view', flt2_2=getattr(m, p)),
-                getattr(m, p)
-            )
-        ),
-    }
-    column_list = ('created_at', 'name', 'version', 'category', 'description')
-    details_modal = True
-    list_template = 'gbooru_images_download/plugin_list.html'
-
-    @expose('/update')
-    def index_update_view(self):
-        return_url = get_redirect_target() or self.get_url('.index_view')
-        manager = api.get_plugin_manager()
-        keys = [
-            'name', 'version', 'description', 'author', 'website', 'copyright',
-            'categories', 'category']
-        for plugin in manager.getAllPlugins():
-            with self.session.no_autoflush:
-                model = models.get_or_create(self.session, self.model, path=plugin.path)[0]
-            #  update record
-            for key in keys:
-                if getattr(plugin, key):
-                    if key == 'version':
-                        setattr(model, key, str(getattr(plugin, key)))
-                    else:
-                        setattr(model, key, getattr(plugin, key))
-            self.session.add(model)
-        self.session.commit()
-        return redirect(return_url)
-
-
-class MatchResultView(ModelView):
-
-    def _order_by(self, query, joins, sort_joins, sort_field, sort_desc):
-        try:
-            res = super()._order_by(query, joins, sort_joins, sort_field, sort_desc)
-        except AttributeError as e:
-            if sort_field.key not in ('url', 'thumbnail_url'):
-                log.error('{}'.format(e), sort_field_key=sort_field.key)
-                raise e
-            if sort_field is not None:
-                # Handle joins
-                query, joins, alias = self._apply_path_joins(
-                    query, joins, sort_joins, inner_join=False)
-                try:
-                    field = getattr(self.model, sort_field.key)
-                    if sort_desc:
-                        query = query.join(models.Url, field).order_by(desc(models.Url.value))
-                    else:
-                        query = query.join(models.Url, field).order_by(models.Url.value)
-                except Exception as e:
-                    raise e
-            return query, joins
-        return res
-
-    def _url_formatter(self, context, model, name):
-        data = getattr(model, name)
-        res = '(ID:{}) {} {} {}'.format(
-            data.id,
-            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
-                url_for('admin.url_redirect', u=model.url.value),
-                "btn view-details-btn btn-default",
-                "detail"
-            )),
-            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
-                url_for('url.edit_view', id=model.id),
-                "btn btn-default",
-                "edit"
-            )),
-            Markup('<a href="{}">{}</a> ({})'.format(
-                data.value, basename(data.value.path.segments[-1]), data.value.host
-            )),
-        )
-        if not model.thumbnail_url:
-            return res
-        res = Markup('<div {0}"><img {1} src="{2}"></div><div {3}>{4}</div>'.format(
-            'class="col-md-2"',
-            'style="max-width:100%"',
-            model.thumbnail_url.value,
-            'class="col-md-10"',
-            '<span style="word-wrap:break-word">{}</span>'.format(res)
-        ))
-        return res
-
-    can_view_details = True
-    can_set_page_size = True
-    column_default_sort = ('created_at', True)
-    column_exclude_list = ('thumbnail_url', )
-    column_filters = [
-        'created_at',
-        'search_queries',
-        'tags',
-        'thumbnail_url',
-        'url',
-    ]
-    column_formatters = {
-        'created_at': date_formatter,
-        'thumbnail_url': url_formatter,
-        'url': _url_formatter,
-    }
-    column_sortable_list = ('created_at', 'url', 'thumbnail_url')
-    named_filter_urls = True
-    page_size = 100
-
-    def create_model(self, form):
-        try:
-            models.get_or_create_match_result(
-                self.session, url=form.url, thumbnail_url=form.thumbnail_url)
-            model = self.model()
-            form.populate_obj(model)
-            # plugin.get_match_results(search_term, page, session)
-            assert model.mode.category == 'mode'
-            pm = api.get_plugin_manager()
-            plugin = pm.getPluginByName(model.mode.name, model.mode.category)
-            mrs = list(set(plugin.plugin_object.get_match_results(
-                model.search_term, model.page, self.session)))
-            model.match_results = mrs
-            self.session.add(model)
-            self._on_model_change(form, model, True)
-            self.session.commit()
-        except Exception as ex:
-            if not self.handle_view_exception(ex):
-                flash(gettext('Failed to create record. %(error)s', error=str(ex)), 'error')
-                log.exception('Failed to create record.')
-            self.session.rollback()
-            return False
-        else:
-            self.after_model_change(form, model, True)
-        return model
-
-
-class NetlocView(ModelView):
-    can_create = False
-    can_edit = False
-    can_set_page_size = True
-    column_editable_list = ('hidden', )
-    column_formatters = {'created_at': date_formatter}
-    edit_modal = True
-    form_columns = ('hidden', )
-    form_excluded_columns = ['created_at', ]
-    page_size = 100
-
-    def get_list(self, page, sort_field, sort_desc, search, filters, page_size=None):
-        query = self.session.query(models.Url.value).distinct()
-        for item in query:
-            n_model = models.get_or_create(self.session, self.model, value=item[0].netloc)[0]
-            self.session.add(n_model)
-        self.session.commit()
-        res = super().get_list(page, sort_field, sort_desc, search, filters, page_size=None)
-        return res
-
-
 class SearchQueryView(ModelView):
     """Custom view for SearchQuery model."""
 
@@ -513,6 +513,26 @@ class SearchQueryView(ModelView):
             after_model_change_func=self.after_model_change
         )
         return res
+
+
+class TagView(ModelView):
+    """Custom view for Tag model."""
+
+    can_view_details = True
+    column_default_sort = ('created_at', True)
+    column_filters = ('value', 'namespace.value')
+    column_formatters = {
+        'created_at': date_formatter,
+        'urls': lambda v, c, m, p: len(m.urls),
+        'value': lambda v, c, m, p: Markup(
+            '<span style="word-break:break-all;">{}</span>'.format(m.value)
+        )
+    }
+    column_labels = {'namespace.value': 'Namespace'}
+    column_list = ('created_at', 'namespace.value', 'value', 'urls')
+    column_searchable_list = ('value', 'namespace.value')
+    column_sortable_list = ('value', 'namespace.value', 'created_at')
+    page_size = 100
 
 
 class UrlView(ModelView):

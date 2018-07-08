@@ -57,23 +57,6 @@ class JsonDataView(CustomModelView):
     column_formatters = {'created_at': date_formatter, 'value': _value_formatter, }
 
 
-class TagView(CustomModelView):
-    """Custom view for Tag model."""
-
-    column_filters = ('value', 'namespace.value')
-    column_formatters = {
-        'created_at': date_formatter,
-        'urls': lambda v, c, m, p: len(m.urls),
-        'value': lambda v, c, m, p: Markup(
-            '<span style="word-break:break-all;">{}</span>'.format(m.value)
-        )
-    }
-    column_labels = {'namespace.value': 'Namespace'}
-    column_list = ('created_at', 'namespace.value', 'value', 'urls')
-    column_searchable_list = ('value', 'namespace.value')
-    column_sortable_list = ('value', 'namespace.value', 'created_at')
-
-
 class FilteredImageUrlView(CustomModelView):
     """Custom view for Tag model."""
 
