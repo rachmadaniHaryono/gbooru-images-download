@@ -1,16 +1,12 @@
 language: python
 python:
+  - "3.5"
   - "3.6"
-env:
-  global:
-    - PIPENV_VENV_IN_PROJECT=1
-    - PIPENV_IGNORE_VIRTUALENVS=1
 # command to install dependencies
 install:
-  - pip install pipenv
-  - pipenv install --dev --three
+  - pip install .
+  - pip install .[test]
 # command to run tests
 script:
-  #- pipenv run -- pylint --rcfile .pylintrc ./google_images_download
-  - pipenv run flake8
-  - pipenv run pytest -m 'not no_travis'
+  - python -m flake8
+  # - pytest
