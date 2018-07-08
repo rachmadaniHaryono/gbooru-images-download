@@ -73,6 +73,6 @@ setup(
     author_email="foreturiga@gmail.com",
     entry_points={
         'console_scripts': [
-            'gbooru-images-download-server = gbooru_images_download.server:cli'
+            'gbooru-images-download = gbooru_images_download.__main__:cli'
         ]},
 )
