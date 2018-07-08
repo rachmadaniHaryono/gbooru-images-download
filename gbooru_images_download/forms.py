@@ -15,14 +15,6 @@ def get_parser_choices():
     return res
 
 
-class FindImageForm(FlaskForm):
-    """Form for getting result from file search."""
-    file_path = wtforms.StringField('File Path', validators=[Optional()])
-    url = wtforms.StringField('URL', validators=[Optional()])
-    search_type = wtforms.SelectField('Search Type', validators=[Optional()], choices=models.SearchImagePage.TYPES)  # NOQA
-    disable_cache = wtforms.BooleanField(validators=[Optional()])
-
-
 class IndexForm(FlaskForm):  # pylint: disable=too-few-public-methods
     """Form for index."""
     search_term = wtforms.StringField('search term', validators=[DataRequired()])
