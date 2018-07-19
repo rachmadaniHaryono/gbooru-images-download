@@ -129,34 +129,27 @@ class MatchResultView(ModelView):
             return query, joins
         return res
 
-    def _url_formatter(self, context, model, name):
-        data = getattr(model, name)
-        res = '(ID:{}) {} {} {}'.format(
-            data.id,
-            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
-                url_for('admin.url_redirect', u=model.url.value),
-                "btn view-details-btn btn-default",
-                "detail"
-            )),
-            Markup('<a class="{1}" href="{0}">{2}</a>'.format(
-                url_for('url.edit_view', id=model.id),
-                "btn btn-default",
-                "edit"
-            )),
-            Markup('<a href="{}">{}</a> ({})'.format(
-                data.value, basename(data.value.path.segments[-1]), data.value.host
-            )),
-        )
+    def _thumbnail_formatter(self, context, model, name):
         if not model.thumbnail_url:
-            return res
-        res = Markup('<div {0}"><img {1} src="{2}"></div><div {3}>{4}</div>'.format(
-            'class="col-md-2"',
+            return
+        return Markup('<figure><img {} src="{}">{}</figure>'.format(
             'style="max-width:100%"',
             model.thumbnail_url.value,
-            'class="col-md-10"',
-            '<span style="word-wrap:break-word">{}</span>'.format(res)
+            Markup('<figcaption>{}</figcaption>'.format(
+                ''.join([
+                    Markup('<a class="{1}" href="{0}">{2}</a>'.format(
+                        url_for('admin.url_redirect', u=model.url.value),
+                        "btn view-details-btn btn-default",
+                        "detail"
+                    )),
+                    Markup('<a class="{1}" href="{0}">{2}</a>'.format(
+                        url_for('url.edit_view', id=model.id),
+                        "btn btn-default",
+                        "edit"
+                    )),
+                ])
+            ))
         ))
-        return res
 
     can_view_details = True
     can_set_page_size = True
@@ -172,8 +165,25 @@ class MatchResultView(ModelView):
     column_formatters = {
         'created_at': date_formatter,
         'thumbnail_url': url_formatter,
-        'url': _url_formatter,
+        'thumbnail': _thumbnail_formatter,
+        'url': url_formatter,
     }
+    column_labels = {
+        'url.value.netloc': 'Netloc',
+        'url.filename': 'Filename',
+        'url.ext': 'Ext',
+        'url.width': 'W',
+        'url.height': 'H',
+    }
+    column_list = (
+        'created_at',
+        'thumbnail',
+        'url.value.netloc',
+        'url.filename',
+        'url.ext',
+        'url.width',
+        'url.height',
+    )
     column_sortable_list = ('created_at', 'url', 'thumbnail_url')
     named_filter_urls = True
     page_size = 100
@@ -565,6 +575,7 @@ class UrlView(ModelView):
     details_template = 'gbooru_images_download/url_details.html'
     form_edit_rules = [
         rules.FieldSet(('value', 'tags'), 'Url'),
+        #  rules.FieldSet(('value', 'hidden', 'tags'), 'Url'),
         rules.FieldSet(('match_results', 'thumbnail_match_results'), 'Match Result'),
         rules.FieldSet(('responses', 'on_final_responses'), 'Response'),
     ]

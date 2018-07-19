@@ -310,11 +310,43 @@ class Url(Base):
     tags = db.relationship(
         'Tag', secondary=url_tags, lazy='subquery',
         backref=db.backref('urls', lazy=True))
+    #  hidden = db.Column(db.Boolean, default=False)
+
+    @hybrid_property
+    def ext(self):
+        ext = os.path.splitext(self.value.path.segments[-1])[1]
+        if ext.startswith('.'):
+            ext = ext[1:]
+        ext = ext.split('?')[0]
+        return ext
 
     @hybrid_property
     def filename(self):
-        url = str(self.value)
-        return os.path.splitext(os.path.basename(url))[0]
+        return os.path.splitext(self.value.path.segments[-1])[0]
+
+    @hybrid_property
+    def height(self):
+        size_name = 'height'
+        tags = self.tags
+        if not isinstance(tags, orm_attributes.InstrumentedAttribute):
+            tags = list(filter(
+                lambda x: x.namespace.alias == size_name or x.namespace.value == size_name,
+                tags
+            ))
+            if tags:
+                return tags[0].value
+
+    @hybrid_property
+    def width(self):
+        size_name = 'width'
+        tags = self.tags
+        if not isinstance(tags, orm_attributes.InstrumentedAttribute):
+            tags = list(filter(
+                lambda x: x.namespace.alias == size_name or x.namespace.value == size_name,
+                tags
+            ))
+            if tags:
+                return tags[0].value
 
     @hybrid_property
     def content_type(self):
