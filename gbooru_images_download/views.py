@@ -1,5 +1,4 @@
 from functools import partial
-from os.path import basename
 from pprint import pformat
 from urllib.parse import unquote, urlparse
 import json
