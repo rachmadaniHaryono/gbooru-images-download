@@ -20,7 +20,7 @@ dev_deps = test_deps + [
 setup(
     name='gbooru-images-download',
     description="Simple booru for hydrus",
-    version="0.0.1",
+    version="0.1.0",
     long_description=long_description,
     url="https://github.com/rachmadaniHaryono/gbooru-images-download",
     # uncomment if tarball is provided on github
