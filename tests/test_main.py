@@ -4,7 +4,7 @@ import tempfile
 import pytest
 
 
-from gbooru_images_download.server import create_app
+from gbooru_images_download.__main__ import create_app
 from gbooru_images_download import models
 
 

@@ -1,8 +1,9 @@
 #!/usr/bin/python3
-from urllib.parse import urlparse, urlencode, parse_qs, urljoin, quote_plus
 from enum import Enum
+from urllib.parse import urlparse, urlencode, parse_qs, urljoin, quote_plus
 import hashlib
 import json
+import logging
 import os
 import shutil
 import tempfile
@@ -10,7 +11,6 @@ import tempfile
 from bs4 import BeautifulSoup
 from PIL import Image
 import requests
-import structlog
 try:
     from selenium import webdriver
     from selenium.webdriver.firefox.options import Options
@@ -20,9 +20,10 @@ except ImportError:
 
 import gbooru_images_download as gid
 from . import models, exceptions
-from .models import get_plugin_manager, ModePlugin  # NOQA
+from .models import get_plugin_manager
 
-log = structlog.getLogger(__name__)
+
+log = logging.getLogger(__name__)
 
 
 class Namespace(Enum):

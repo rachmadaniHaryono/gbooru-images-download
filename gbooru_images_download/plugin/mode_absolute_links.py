@@ -3,7 +3,7 @@ from urllib.parse import urlparse
 from gbooru_images_download import models, api
 
 
-class ModePlugin(api.ModePlugin):
+class ModePlugin():
 
     def get_match_results(
             self, search_term=None, page=1, text=None, response=None, session=None, url=None):

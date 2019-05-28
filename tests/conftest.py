@@ -3,12 +3,11 @@ import logging
 
 from flask import Flask
 import pytest
-import structlog
 
 from gbooru_images_download import models
 
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger('__name__')
 vcr_log = logging.getLogger("vcr")
 vcr_log.setLevel(logging.INFO)
 logging.basicConfig()

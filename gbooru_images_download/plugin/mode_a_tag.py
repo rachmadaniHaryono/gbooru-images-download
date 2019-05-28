@@ -9,7 +9,7 @@ from gbooru_images_download import models, api
 log = structlog.getLogger(__name__)
 
 
-class ModePlugin(api.ModePlugin):
+class ModePlugin():
 
     def get_match_results(self, search_term, page, session=None):
         assert page == 1, 'Only support first page'

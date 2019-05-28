@@ -2,6 +2,7 @@ from functools import partial
 from pprint import pformat
 from urllib.parse import unquote, urlparse
 import json
+import logging
 
 from bs4 import BeautifulSoup
 from flask import flash, make_response, redirect, request, url_for
@@ -15,12 +16,11 @@ from jinja2 import Markup, contextfunction
 from sqlalchemy.sql.expression import desc
 from wtforms import fields, validators
 import humanize
-import structlog
 
 from . import api, models, filters, forms
 
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def date_formatter(view, context, model, name):

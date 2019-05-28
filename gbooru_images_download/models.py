@@ -3,6 +3,7 @@
 from datetime import datetime
 from urllib.parse import urlparse
 import json
+import logging
 import os
 
 from flask import flash
@@ -13,15 +14,12 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import attributes as orm_attributes, relationship
 from sqlalchemy.types import TIMESTAMP
 from sqlalchemy_utils.types import ChoiceType, JSONType, ScalarListType, URLType
-from yapsy.IPlugin import IPlugin
-from yapsy.PluginManager import PluginManager
 import requests
-import structlog
 
 from . import plugin
 
 
-log = structlog.getLogger(__name__)
+log = logging.getLogger(__name__)
 db = SQLAlchemy()
 
 match_result_tags = db.Table(
@@ -41,7 +39,7 @@ url_tags = db.Table(
 # {{{ base class
 
 
-class Base(db.Model):
+class Base(db.Model):  # type: ignore
     __abstract__ = True
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(TIMESTAMP, default=datetime.now, nullable=False)
@@ -401,18 +399,6 @@ def get_plugin_manager():
     manager.collectPlugins()
     return manager
 
-
-class ModePlugin(IPlugin):
-    """Base class for parser plugin."""
-
-    def get_match_results(
-            self, search_term=None, page=1, text=None, response=None, session=None, url=None):
-        """Get match result models.
-
-        - search_term and page
-        - text or response or both
-        """
-        raise NotImplementedError
 
     @classmethod
     def get_match_results_dict(self, text=None, response=None, session=None, url=None):

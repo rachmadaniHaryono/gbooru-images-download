@@ -9,7 +9,7 @@ from gbooru_images_download import models, api
 log = structlog.getLogger(__name__)
 
 
-class ParserPlugin(api.ModePlugin):
+class ParserPlugin():
 
     def get_match_results(self, text, session=None, url=None):
         soup = BeautifulSoup(text, 'html.parser')

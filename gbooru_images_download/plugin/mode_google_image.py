@@ -85,7 +85,7 @@ def get_match_results(json_response=None, session=None):
         yield
 
 
-class ModePlugin(api.ModePlugin):
+class ModePlugin():
     """Base class for parser plugin."""
 
     def get_match_results(

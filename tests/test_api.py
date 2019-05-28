@@ -25,68 +25,6 @@ def tmp_pic(tmpdir):
 
 
 @pytest.mark.no_travis
-@vcr.use_cassette('cassette/test_get_or_create_search_query.yaml', record_mode='new_episodes')
-def test_get_or_create_search_query(tmp_db):
-    """test method."""
-    res = api.get_or_create_search_query('red picture')[0]
-    tmp_db.session.add(res)
-    tmp_db.session.commit()
-    assert res
-    assert len(res.match_results) > 0
-
-
-@pytest.mark.no_travis
-@vcr.use_cassette('cassette/test_get_or_create_match_result_from_json_resp.yaml', record_mode='new_episodes')  # NOQA
-def test_get_or_create_match_result_from_json_resp(tmp_db):
-    """test method."""
-    query_url = \
-        'https://www.google.com/search' \
-        '?q=red+picture&tbm=isch&ijn=0&start=0&asearch=ichunk&async=_id%3Arg_s%2C_pms%3As'
-    resp = requests.get(query_url)
-    json_resp = resp.json()
-    res = api.get_or_create_match_result_from_json_resp(json_resp)
-    m1 = next(res)
-    assert m1[1]
-    assert m1[0].img_url
-    tmp_db.session.add(m1[0])
-    tmp_db.session.commit()
-    assert m1[0].img_url
-    m_list = [m1[0]]
-    m_list.extend([x[0] for x in res])
-    assert all([x.img_url for x in m_list])
-
-
-@pytest.mark.no_travis
-def test_add_tags_to_image_url(tmp_db):
-    """test method."""
-    args = {
-        'url': {'value': 'http://example.com/1.jpg', 'width': 2560, 'height': 1920},
-        'tags': [
-            {'value': 'picture title', 'namespace': 'picture title'},
-            {'value': 'site', 'namespace': 'site'},
-            {'value': 'site', 'namespace': 'site'},
-            {'value': 'img', 'namespace': 'img ext'}],
-    }
-    img_url, _ = models.get_or_create(
-        tmp_db.session, models.Url, **args['url'])
-    img_url_tags = api.add_tags_to_image_url(img_url, args['tags'])
-    models.db.session.add_all([img_url] + img_url_tags)
-    models.db.session.commit()
-    assert len(img_url.tags) > 0
-
-
-@pytest.mark.no_travis
-@vcr.use_cassette('cassette/test_get_or_create_search_image.yaml', record_mode='new_episodes')  # NOQA
-def test_get_or_create_search_image(tmp_pic, tmp_db, tmpdir):
-    """test method."""
-    res, created = api.get_or_create_search_image(
-        tmp_pic['image_input'].strpath, thumb_folder=tmpdir.strpath)
-    assert created
-    assert len(res.text_matches) > 2
-    assert len(res.main_similar_results) > 2
-
-
-@pytest.mark.no_travis
 @vcr.use_cassette('cassette/test_parse_img_search_html.yaml', record_mode='new_episodes')  # NOQA
 def test_parse_img_search_html(tmp_db):
     search_url = \
